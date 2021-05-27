@@ -68,6 +68,12 @@ enum TokenKind {
     #[regex("(?i)(achilles|adonis|adriana|aegeon|aemilia|agamemnon|agrippa|ajax|alonso|andromache|angelo|antiochus|antonio|arthur|autolycus|balthazar|banquo|beatrice|benedick|benvolio|bianca|brabantio|brutus|capulet|cassandra|cassius|christopher[ \n]+sly|cicero|claudio|claudius|cleopatra|cordelia|cornelius|cressida|cymberline|demetrius|desdemona|dionyza|doctor[ \n]+caius|dogberry|don[ \n]+john|don[ \n]+pedro|donalbain|dorcas|duncan|egeus|emilia|escalus|falstaff|fenton|ferdinand|ford|fortinbras|francisca|friar[ \n]+john|friar[ \n]+laurence|gertrude|goneril|hamlet|hecate|hector|helen|helena|hermia|hermonie|hippolyta|horatio|imogen|isabella|john[ \n]+of[ \n]+gaunt|john[ \n]+of[ \n]+lancaster|julia|juliet|julius[ \n]+caesar|king[ \n]+henry|king[ \n]+john|king[ \n]+lear|king[ \n]+richard|lady[ \n]+capulet|lady[ \n]+macbeth|lady[ \n]+macduff|lady[ \n]+montague|lennox|leonato|luciana|lucio|lychorida|lysander|macbeth|macduff|malcolm|mariana|mark[ \n]+antony|mercutio|miranda|mistress[ \n]+ford|mistress[ \n]+overdone|mistress[ \n]+page|montague|mopsa|oberon|octavia|octavius[ \n]+caesar|olivia|ophelia|orlando|orsino|othello|page|pantino|paris|pericles|pinch|polonius|pompeius|portia|priam|prince[ \n]+henry|prospero|proteus|publius|puck|queen[ \n]+elinor|regan|robin|romeo|rosalind|sebastian|shallow|shylock|slender|solinus|stephano|thaisa|the[ \n]+abbot[ \n]+of[ \n]+westminster|the[ \n]+apothecary|the[ \n]+archbishop[ \n]+of[ \n]+canterbury|the[ \n]+duke[ \n]+of[ \n]+milan|the[ \n]+duke[ \n]+of[ \n]+venice|the[ \n]+ghost|theseus|thurio|timon|titania|titus|troilus|tybalt|ulysses|valentine|venus|vincentio|viol)")]
     Character,
 
+    #[regex("(?i)(the[ \n](product[ \n]of|quotient[ \n]between|remainder[ \n]of[ \n]the[ \n]quotient[ \n]between|sum[ \n]of))")]
+    BinaryOperation,
+
+    #[regex("(?i)(the[ \n](cube[ \n]of|factorial[ \n]of|square[ \n]of[ \n]|the[ \n]square[ \n]root[ \n]of)twice)")]
+    UnaryOperation,
+
     #[regex("(?i)(nothing|zero)")]
     Nothing,
 
