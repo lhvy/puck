@@ -1,4 +1,4 @@
-use logos::Logos;
+use logos::{Lexer, Logos};
 
 #[derive(Logos, Debug, PartialEq)]
 enum TokenKind {
@@ -74,11 +74,50 @@ enum TokenKind {
     #[regex("(?i)(the[ \n](cube[ \n]of|factorial[ \n]of|square[ \n]of[ \n]|the[ \n]square[ \n]root[ \n]of)twice)")]
     UnaryOperation,
 
+    #[regex("(?i)(let[ \n]us|we[ \n]shall|we[ \n]must)")]
+    LetUs,
+
+    #[regex("(?i)(proceed[ \n]to|return[ \n]to)")]
+    ProceedTo,
+
+    #[regex("(?i)(if[ \n]not)")]
+    PositiveIf,
+
+    #[regex("(?i)(if[ \n]so)")]
+    NegativeIf,
+
     #[regex("(?i)(nothing|zero)")]
     Nothing,
 
+    #[token(".")]
+    Period,
+
+    #[token("!")]
+    Exclamation,
+
+    #[token("?")]
+    Question,
+
+    #[token(",")]
+    Comma,
+
+    #[regex("M*(CM|CD|D?C*)(XC|XL|L?X*)(IX|IV|V?I*)", roman_numeral)]
+    Colon,
+
     #[error]
     Error,
+}
+
+fn roman_numeral(lex: Lexer<TokenKind>) -> bool {
+    let slice = lex.slice();
+    let regex =
+        regex::Regex::new("M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})").unwrap();
+
+    if let Some(roman_numeral) = regex.find(slice) {
+        return roman_numeral.start() == 0 && roman_numeral.end() == slice.len();
+    }
+
+    false
 }
 
 #[cfg(test)]
