@@ -1,7 +1,7 @@
 use logos::{Lexer, Logos};
 
 #[derive(Logos, Debug, PartialEq)]
-enum TokenKind {
+pub(crate) enum SyntaxKind {
     #[regex("(?i)(am|are|art|be|is)")]
     Be,
 
@@ -147,7 +147,7 @@ enum TokenKind {
     Error,
 }
 
-fn roman_numeral(lex: Lexer<TokenKind>) -> bool {
+fn roman_numeral(lex: &mut Lexer<SyntaxKind>) -> bool {
     let slice = lex.slice();
     let regex =
         regex::Regex::new("M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})").unwrap();
@@ -163,8 +163,8 @@ fn roman_numeral(lex: Lexer<TokenKind>) -> bool {
 mod tests {
     use super::*;
 
-    fn check(input: &str, kind: TokenKind) {
-        let mut lexer = TokenKind::lexer(input);
+    fn check(input: &str, kind: SyntaxKind) {
+        let mut lexer = SyntaxKind::lexer(input);
 
         let token_kind = lexer.next().unwrap();
         let text = lexer.slice();
@@ -175,63 +175,63 @@ mod tests {
 
     #[test]
     fn lex_be() {
-        check("am", TokenKind::Be);
-        check("Are", TokenKind::Be);
-        check("aRT", TokenKind::Be);
-        check("be", TokenKind::Be);
-        check("iS", TokenKind::Be);
+        check("am", SyntaxKind::Be);
+        check("Are", SyntaxKind::Be);
+        check("aRT", SyntaxKind::Be);
+        check("be", SyntaxKind::Be);
+        check("iS", SyntaxKind::Be);
     }
 
     #[test]
     fn lex_article() {
-        check("a", TokenKind::Article);
-        check("aN", TokenKind::Article);
-        check("The", TokenKind::Article);
+        check("a", SyntaxKind::Article);
+        check("aN", SyntaxKind::Article);
+        check("The", SyntaxKind::Article);
     }
 
     #[test]
     fn lex_first_person() {
-        check("I", TokenKind::FirstPerson);
-        check("me", TokenKind::FirstPerson);
+        check("I", SyntaxKind::FirstPerson);
+        check("me", SyntaxKind::FirstPerson);
     }
 
     #[test]
     fn lex_first_person_reflexive() {
-        check("myself", TokenKind::FirstPersonReflexive);
-        check("Myself", TokenKind::FirstPersonReflexive);
+        check("myself", SyntaxKind::FirstPersonReflexive);
+        check("Myself", SyntaxKind::FirstPersonReflexive);
     }
 
     #[test]
     fn lex_first_person_possessive() {
-        check("mine", TokenKind::FirstPersonPossessive);
-        check("My", TokenKind::FirstPersonPossessive);
+        check("mine", SyntaxKind::FirstPersonPossessive);
+        check("My", SyntaxKind::FirstPersonPossessive);
     }
 
     #[test]
     fn lex_second_person() {
-        check("thee", TokenKind::SecondPerson);
-        check("Thou", TokenKind::SecondPerson);
-        check("yOu", TokenKind::SecondPerson);
+        check("thee", SyntaxKind::SecondPerson);
+        check("Thou", SyntaxKind::SecondPerson);
+        check("yOu", SyntaxKind::SecondPerson);
     }
 
     #[test]
     fn lex_second_person_reflexive() {
-        check("thyself", TokenKind::SecondPersonReflexive);
-        check("Yourself", TokenKind::SecondPersonReflexive);
+        check("thyself", SyntaxKind::SecondPersonReflexive);
+        check("Yourself", SyntaxKind::SecondPersonReflexive);
     }
 
     #[test]
     fn lex_second_person_possessive() {
-        check("thine", TokenKind::SecondPersonPossessive);
-        check("Thy", TokenKind::SecondPersonPossessive);
-        check("yoUR", TokenKind::SecondPersonPossessive);
+        check("thine", SyntaxKind::SecondPersonPossessive);
+        check("Thy", SyntaxKind::SecondPersonPossessive);
+        check("yoUR", SyntaxKind::SecondPersonPossessive);
     }
 
     #[test]
     fn lex_third_person_possessive() {
-        check("his", TokenKind::ThirdPersonPossessive);
-        check("Her", TokenKind::ThirdPersonPossessive);
-        check("iTs", TokenKind::ThirdPersonPossessive);
-        check("theIR", TokenKind::ThirdPersonPossessive);
+        check("his", SyntaxKind::ThirdPersonPossessive);
+        check("Her", SyntaxKind::ThirdPersonPossessive);
+        check("iTs", SyntaxKind::ThirdPersonPossessive);
+        check("theIR", SyntaxKind::ThirdPersonPossessive);
     }
 }
