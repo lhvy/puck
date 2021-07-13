@@ -89,6 +89,45 @@ enum TokenKind {
     #[regex("(?i)(nothing|zero)")]
     Nothing,
 
+    #[regex("(?i)(open)")]
+    Open,
+
+    #[regex("(?i)(speak)")]
+    Speak,
+
+    #[regex("(?i)(listen[ \n]to)")]
+    ListenTo,
+
+    #[regex("(?i)(heart)")]
+    Heart,
+
+    #[regex("(?i)(mind)")]
+    Mind,
+
+    #[regex("(?i)(remember)")]
+    Remember,
+
+    #[regex("(?i)(recall)")]
+    Recall,
+
+    #[regex("(?i)(scene)")]
+    Scene,
+
+    #[regex("(?i)(act)")]
+    Act,
+
+    #[regex("(?i)(a[ \n]pause)")]
+    Pause,
+
+    #[regex("(?i)(enter)")]
+    Enter,
+
+    #[regex("(?i)(exit)")]
+    Exit,
+
+    #[regex("(?i)(exunt)")]
+    Exunt,
+
     #[token(".")]
     Period,
 
