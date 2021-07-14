@@ -1,6 +1,7 @@
 use logos::{Lexer, Logos};
+use num_derive::{FromPrimitive, ToPrimitive};
 
-#[derive(Logos, Debug, PartialEq)]
+#[derive(Logos, Debug, PartialEq, FromPrimitive, ToPrimitive)]
 pub(crate) enum SyntaxKind {
     Root,
 
@@ -159,12 +160,6 @@ fn roman_numeral(lex: &mut Lexer<SyntaxKind>) -> bool {
     }
 
     false
-}
-
-impl From<SyntaxKind> for rowan::SyntaxKind {
-    fn from(kind: SyntaxKind) -> Self {
-        Self(kind as u16)
-    }
 }
 
 #[cfg(test)]
