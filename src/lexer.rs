@@ -2,6 +2,8 @@ use logos::{Lexer, Logos};
 
 #[derive(Logos, Debug, PartialEq)]
 pub(crate) enum SyntaxKind {
+    Root,
+
     #[regex("(?i)(am|are|art|be|is)")]
     Be,
 
@@ -157,6 +159,12 @@ fn roman_numeral(lex: &mut Lexer<SyntaxKind>) -> bool {
     }
 
     false
+}
+
+impl From<SyntaxKind> for rowan::SyntaxKind {
+    fn from(kind: SyntaxKind) -> Self {
+        Self(kind as u16)
+    }
 }
 
 #[cfg(test)]
