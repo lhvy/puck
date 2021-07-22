@@ -21,7 +21,9 @@ impl<'a> Parser<'a> {
     pub(crate) fn parse(mut self) -> Parse {
         self.start_node(SyntaxKind::Root);
 
-        self.parse_character_def();
+        if self.at(SyntaxKind::Character) {
+            self.parse_character_def();
+        }
 
         self.finish_node();
 
@@ -39,16 +41,17 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_character_def(&mut self) {
-        assert!(self.at(SyntaxKind::CharacterDef));
+        assert!(self.at(SyntaxKind::Character));
         self.start_node(SyntaxKind::CharacterDef);
 
         self.expect(SyntaxKind::Character);
 
         self.start_node(SyntaxKind::Comment);
         self.expect(SyntaxKind::Comma);
-        while !self.at(SyntaxKind::Newline) {
-            self.bump();
+        while !self.at(SyntaxKind::Newline) && !self.at_eof() {
+            self.skip();
         }
+        self.bump_newline();
         self.finish_node();
 
         self.finish_node();
@@ -66,10 +69,28 @@ impl<'a> Parser<'a> {
         self.peek() == Some(syntax_kind)
     }
 
+    fn at_eof(&mut self) -> bool {
+        self.peek().is_none()
+    }
+
     fn bump(&mut self) {
         let (kind, text) = self.lexer.next().unwrap();
         self.builder
             .token(ShakespeareProgrammingLanguage::kind_to_raw(kind), text);
+    }
+
+    fn skip(&mut self) {
+        let (_, text) = self.lexer.next().unwrap();
+        self.builder.token(
+            ShakespeareProgrammingLanguage::kind_to_raw(SyntaxKind::Skip),
+            text,
+        );
+    }
+
+    fn bump_newline(&mut self) {
+        if self.at(SyntaxKind::Newline) {
+            self.bump();
+        }
     }
 
     fn peek(&mut self) -> Option<SyntaxKind> {
@@ -108,6 +129,42 @@ mod tests {
         let parse = Parser::new(input).parse();
 
         expected_tree.assert_eq(&parse.debug_tree());
+    }
+
+    #[test]
+    fn parse_character_def() {
+        check(
+            "Romeo, a test",
+            expect![[r#"
+Root@0..13
+  CharacterDef@0..13
+    Character@0..5 "Romeo"
+    Comment@5..13
+      Comma@5..6 ","
+      Skip@6..7 " "
+      Skip@7..8 "a"
+      Skip@8..9 " "
+      Skip@9..10 "t"
+      Skip@10..11 "e"
+      Skip@11..12 "s"
+      Skip@12..13 "t""#]],
+        )
+    }
+
+    #[test]
+    fn parse_character_def_with_newline() {
+        check(
+            "Juliet, act\n",
+            expect![[r#"
+Root@0..12
+  CharacterDef@0..12
+    Character@0..6 "Juliet"
+    Comment@6..12
+      Comma@6..7 ","
+      Skip@7..8 " "
+      Skip@8..11 "act"
+      Newline@11..12 "\n""#]],
+        )
     }
 
     #[test]

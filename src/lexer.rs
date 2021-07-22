@@ -32,6 +32,8 @@ pub(crate) enum SyntaxKind {
 
     Comment,
 
+    Skip,
+
     #[regex("(?i)(am|are|art|be|is)")]
     Be,
 
