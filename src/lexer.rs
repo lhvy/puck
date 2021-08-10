@@ -34,6 +34,8 @@ pub(crate) enum SyntaxKind {
 
     Skip,
 
+    StageDirection,
+
     #[regex("(?i)(am|are|art|be|is)")]
     Be,
 
@@ -219,6 +221,12 @@ pub(crate) enum SyntaxKind {
 
     #[token(":")]
     Colon,
+
+    #[token("[")]
+    LBracket,
+
+    #[token("]")]
+    RBracket,
 
     #[regex("M*(CM|CD|D?C*)(XC|XL|L?X*)(IX|IV|V?I*)", roman_numeral)]
     RomanNumeral,

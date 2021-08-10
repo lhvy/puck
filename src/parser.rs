@@ -25,6 +25,10 @@ impl<'a> Parser<'a> {
             self.parse_character_def();
         }
 
+        if self.at(SyntaxKind::LBracket) {
+            self.parse_stage_direction();
+        }
+
         self.finish_node();
 
         // loop {
@@ -43,8 +47,7 @@ impl<'a> Parser<'a> {
     fn parse_character_def(&mut self) {
         assert!(self.at(SyntaxKind::Character));
         self.start_node(SyntaxKind::CharacterDef);
-
-        self.expect(SyntaxKind::Character);
+        self.bump();
 
         self.start_node(SyntaxKind::Comment);
         self.expect(SyntaxKind::Comma);
@@ -54,6 +57,32 @@ impl<'a> Parser<'a> {
         self.bump_newline();
         self.finish_node();
 
+        self.finish_node();
+    }
+
+    fn parse_stage_direction(&mut self) {
+        assert!(self.at(SyntaxKind::LBracket));
+        self.start_node(SyntaxKind::StageDirection);
+        self.bump();
+
+        self.expect(SyntaxKind::Enter);
+
+        self.skip_ws();
+
+        loop {
+            self.expect(SyntaxKind::Character);
+            self.skip_ws();
+
+            if self.at(SyntaxKind::RBracket) {
+                self.bump();
+                break;
+            }
+
+            self.expect(SyntaxKind::And);
+            self.skip_ws();
+        }
+
+        self.bump_newline();
         self.finish_node();
     }
 
@@ -87,10 +116,18 @@ impl<'a> Parser<'a> {
         );
     }
 
-    fn bump_newline(&mut self) {
-        if self.at(SyntaxKind::Newline) {
+    fn skip_ws(&mut self) {
+        while self.at(SyntaxKind::Whitespace) {
             self.bump();
         }
+    }
+
+    fn bump_newline(&mut self) {
+        if self.at_eof() {
+            return;
+        }
+
+        self.expect(SyntaxKind::Newline)
     }
 
     fn peek(&mut self) -> Option<SyntaxKind> {
@@ -164,6 +201,25 @@ Root@0..12
       Skip@7..8 " "
       Skip@8..11 "act"
       Newline@11..12 "\n""#]],
+        )
+    }
+
+    #[test]
+    fn parse_enter_characters() {
+        check(
+            "[Enter Hamlet and Romeo]",
+            expect![[r#"
+Root@0..24
+  StageDirection@0..24
+    LBracket@0..1 "["
+    Enter@1..6 "Enter"
+    Whitespace@6..7 " "
+    Character@7..13 "Hamlet"
+    Whitespace@13..14 " "
+    And@14..17 "and"
+    Whitespace@17..18 " "
+    Character@18..23 "Romeo"
+    RBracket@23..24 "]""#]],
         )
     }
 
