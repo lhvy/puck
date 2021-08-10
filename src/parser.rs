@@ -65,21 +65,29 @@ impl<'a> Parser<'a> {
         self.start_node(SyntaxKind::StageDirection);
         self.bump();
 
-        self.expect(SyntaxKind::Enter);
-
-        self.skip_ws();
-
-        loop {
-            self.expect(SyntaxKind::Character);
-            self.skip_ws();
-
-            if self.at(SyntaxKind::RBracket) {
+        match self.peek() {
+            Some(SyntaxKind::Enter | SyntaxKind::Exit) => {
                 self.bump();
-                break;
-            }
+                self.skip_ws();
 
-            self.expect(SyntaxKind::And);
-            self.skip_ws();
+                loop {
+                    self.expect(SyntaxKind::Character);
+                    self.skip_ws();
+
+                    if self.at(SyntaxKind::RBracket) {
+                        self.bump();
+                        break;
+                    }
+
+                    self.expect(SyntaxKind::And);
+                    self.skip_ws();
+                }
+            }
+            Some(SyntaxKind::Exeunt) => {
+                self.bump();
+                self.expect(SyntaxKind::RBracket);
+            }
+            _ => panic!(),
         }
 
         self.bump_newline();
@@ -220,6 +228,33 @@ Root@0..24
     Whitespace@17..18 " "
     Character@18..23 "Romeo"
     RBracket@23..24 "]""#]],
+        )
+    }
+
+    #[test]
+    fn parse_exit_characters() {
+        check(
+            "[Exit Juliet]",
+            expect![[r#"
+Root@0..13
+  StageDirection@0..13
+    LBracket@0..1 "["
+    Exit@1..5 "Exit"
+    Whitespace@5..6 " "
+    Character@6..12 "Juliet"
+    RBracket@12..13 "]""#]],
+        )
+    }
+    #[test]
+    fn parse_exeunt() {
+        check(
+            "[Exeunt]",
+            expect![[r#"
+Root@0..8
+  StageDirection@0..8
+    LBracket@0..1 "["
+    Exeunt@1..7 "Exeunt"
+    RBracket@7..8 "]""#]],
         )
     }
 

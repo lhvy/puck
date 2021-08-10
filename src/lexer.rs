@@ -204,8 +204,8 @@ pub(crate) enum SyntaxKind {
     #[regex("(?i)(exit)")]
     Exit,
 
-    #[regex("(?i)(exunt)")]
-    Exunt,
+    #[regex("(?i)(exeunt)")]
+    Exeunt,
 
     #[token(".")]
     Period,
