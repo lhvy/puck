@@ -14,14 +14,22 @@ impl<'a> Lexer<'a> {
 }
 
 impl<'a> Iterator for Lexer<'a> {
-    type Item = (SyntaxKind, &'a str);
+    type Item = Token<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let syntax_kind = self.inner.next()?;
         let slice = self.inner.slice();
 
-        Some((syntax_kind, slice))
+        Some(Token {
+            kind: syntax_kind,
+            text: slice,
+        })
     }
+}
+
+pub(crate) struct Token<'a> {
+    pub(crate) kind: SyntaxKind,
+    pub(crate) text: &'a str,
 }
 
 #[derive(Logos, Debug, PartialEq, FromPrimitive, ToPrimitive, Clone, Copy)]
@@ -35,6 +43,14 @@ pub(crate) enum SyntaxKind {
     Skip,
 
     StageDirection,
+
+    Dialog,
+
+    NounExpr,
+
+    BinExpr,
+
+    Statement,
 
     #[regex("(?i)(am|are|art|be|is)")]
     Be,

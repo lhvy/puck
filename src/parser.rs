@@ -1,19 +1,20 @@
 use crate::{
-    lexer::{Lexer, SyntaxKind},
+    lexer::{Lexer, SyntaxKind, Token},
     syntax::{ShakespeareProgrammingLanguage, SyntaxNode},
 };
-use rowan::{GreenNode, GreenNodeBuilder, Language};
-use std::iter::Peekable;
+use rowan::{Checkpoint, GreenNode, GreenNodeBuilder, Language};
 
 pub(crate) struct Parser<'a> {
-    lexer: Peekable<Lexer<'a>>,
+    tokens: Vec<Token<'a>>,
     builder: GreenNodeBuilder<'static>,
 }
 
 impl<'a> Parser<'a> {
     pub(crate) fn new(input: &'a str) -> Self {
+        let mut tokens: Vec<_> = Lexer::new(input).collect();
+        tokens.reverse();
         Self {
-            lexer: Lexer::new(input).peekable(),
+            tokens,
             builder: GreenNodeBuilder::new(),
         }
     }
@@ -22,7 +23,11 @@ impl<'a> Parser<'a> {
         self.start_node(SyntaxKind::Root);
 
         if self.at(SyntaxKind::Character) {
-            self.parse_character_def();
+            match self.lookahead(1) {
+                Some(SyntaxKind::Colon) => self.parse_dialog(),
+                Some(SyntaxKind::Comma) => self.parse_character_def(),
+                _ => panic!(),
+            }
         }
 
         if self.at(SyntaxKind::LBracket) {
@@ -56,6 +61,146 @@ impl<'a> Parser<'a> {
         }
         self.bump_newline();
         self.finish_node();
+
+        self.finish_node();
+    }
+
+    fn parse_dialog(&mut self) {
+        assert!(self.at(SyntaxKind::Character));
+        self.start_node(SyntaxKind::Dialog);
+        self.bump();
+
+        self.expect(SyntaxKind::Colon);
+        self.skip_ws();
+
+        while !self.at(SyntaxKind::Newline) && !self.at_eof() {
+            self.parse_sentence();
+        }
+
+        self.bump_newline();
+        self.finish_node();
+    }
+
+    fn parse_sentence(&mut self) {
+        match self.peek() {
+            Some(SyntaxKind::SecondPerson) => self.parse_statement(),
+            Some(SyntaxKind::Open | SyntaxKind::Speak) => todo!(),
+            _ => panic!(),
+        }
+    }
+
+    fn parse_statement(&mut self) {
+        assert!(self.at(SyntaxKind::SecondPerson));
+        self.start_node(SyntaxKind::Statement);
+        self.bump();
+        self.skip_ws();
+
+        self.expect(SyntaxKind::Be);
+        self.skip_ws();
+
+        self.parse_expr();
+        self.expect(SyntaxKind::Period);
+
+        self.finish_node();
+    }
+
+    fn parse_expr(&mut self) {
+        if self.at(SyntaxKind::Nothing) {
+            self.bump();
+            return;
+        }
+
+        if self.at(SyntaxKind::Period) {
+            return;
+        }
+
+        let checkpoint = self.builder.checkpoint();
+
+        self.expect(SyntaxKind::Article);
+        self.skip_ws();
+
+        match self.peek() {
+            Some(
+                SyntaxKind::PositiveAdjective
+                | SyntaxKind::NegativeAdjective
+                | SyntaxKind::NeutralAdjective
+                | SyntaxKind::PositiveNoun
+                | SyntaxKind::NegativeNoun
+                | SyntaxKind::NeutralNoun,
+            ) => self.parse_noun_expr(checkpoint),
+            Some(
+                SyntaxKind::Difference
+                | SyntaxKind::Product
+                | SyntaxKind::Quotient
+                | SyntaxKind::Remainder
+                | SyntaxKind::Sum,
+            ) => self.parse_bin_expr(checkpoint),
+            _ => panic!(),
+        }
+    }
+
+    fn parse_noun_expr(&mut self, checkpoint: Checkpoint) {
+        self.start_node_at(checkpoint, SyntaxKind::NounExpr);
+
+        loop {
+            if matches!(
+                self.peek(),
+                Some(SyntaxKind::PositiveNoun | SyntaxKind::NegativeNoun | SyntaxKind::NeutralNoun)
+            ) {
+                self.bump();
+                break;
+            }
+
+            match self.peek() {
+                Some(
+                    SyntaxKind::PositiveAdjective
+                    | SyntaxKind::NegativeAdjective
+                    | SyntaxKind::NeutralAdjective,
+                ) => self.bump(),
+                _ => panic!(),
+            }
+            self.skip_ws();
+        }
+
+        self.finish_node();
+    }
+
+    fn parse_bin_expr(&mut self, checkpoint: Checkpoint) {
+        self.start_node_at(checkpoint, SyntaxKind::BinExpr);
+
+        match self.peek() {
+            Some(SyntaxKind::Difference | SyntaxKind::Quotient) => {
+                self.bump();
+                self.skip_ws();
+                self.expect(SyntaxKind::Between);
+            }
+            Some(SyntaxKind::Product | SyntaxKind::Sum) => {
+                self.bump();
+                self.skip_ws();
+                self.expect(SyntaxKind::Of);
+            }
+            Some(SyntaxKind::Remainder) => {
+                self.bump();
+                self.skip_ws();
+                self.expect(SyntaxKind::Of);
+                self.skip_ws();
+                self.expect(SyntaxKind::Article);
+                self.skip_ws();
+                self.expect(SyntaxKind::Quotient);
+                self.skip_ws();
+                self.expect(SyntaxKind::Between);
+            }
+            _ => panic!(),
+        }
+        self.skip_ws();
+
+        self.parse_expr();
+        self.skip_ws();
+
+        self.expect(SyntaxKind::And);
+        self.skip_ws();
+
+        self.parse_expr();
 
         self.finish_node();
     }
@@ -111,13 +256,13 @@ impl<'a> Parser<'a> {
     }
 
     fn bump(&mut self) {
-        let (kind, text) = self.lexer.next().unwrap();
+        let Token { kind, text } = self.tokens.pop().unwrap();
         self.builder
             .token(ShakespeareProgrammingLanguage::kind_to_raw(kind), text);
     }
 
     fn skip(&mut self) {
-        let (_, text) = self.lexer.next().unwrap();
+        let Token { text, .. } = self.tokens.pop().unwrap();
         self.builder.token(
             ShakespeareProgrammingLanguage::kind_to_raw(SyntaxKind::Skip),
             text,
@@ -139,12 +284,26 @@ impl<'a> Parser<'a> {
     }
 
     fn peek(&mut self) -> Option<SyntaxKind> {
-        self.lexer.peek().map(|(kind, _)| *kind)
+        self.tokens.last().map(|Token { kind, .. }| *kind)
+    }
+
+    fn lookahead(&mut self, amount: usize) -> Option<SyntaxKind> {
+        assert!(amount > 0, "Use peek instead for amount 0");
+        self.tokens
+            .get(self.tokens.len() - amount - 1)
+            .map(|Token { kind, .. }| *kind)
     }
 
     fn start_node(&mut self, kind: SyntaxKind) {
         self.builder
             .start_node(ShakespeareProgrammingLanguage::kind_to_raw(kind));
+    }
+
+    fn start_node_at(&mut self, checkpoint: Checkpoint, kind: SyntaxKind) {
+        self.builder.start_node_at(
+            checkpoint,
+            ShakespeareProgrammingLanguage::kind_to_raw(kind),
+        );
     }
 
     fn finish_node(&mut self) {
@@ -257,6 +416,121 @@ Root@0..8
     RBracket@7..8 "]""#]],
         )
     }
+
+    #[test]
+    fn parse_dialog_0() {
+        check(
+            "Juliet: You are nothing.",
+            expect![[r#"
+Root@0..24
+  Dialog@0..24
+    Character@0..6 "Juliet"
+    Colon@6..7 ":"
+    Whitespace@7..8 " "
+    Statement@8..24
+      SecondPerson@8..11 "You"
+      Whitespace@11..12 " "
+      Be@12..15 "are"
+      Whitespace@15..16 " "
+      Nothing@16..23 "nothing"
+      Period@23..24 ".""#]],
+        )
+    }
+
+    #[test]
+    fn parse_dialog_1() {
+        check(
+            "Juliet: Thou art a lord.",
+            expect![[r#"
+Root@0..24
+  Dialog@0..24
+    Character@0..6 "Juliet"
+    Colon@6..7 ":"
+    Whitespace@7..8 " "
+    Statement@8..24
+      SecondPerson@8..12 "Thou"
+      Whitespace@12..13 " "
+      Be@13..16 "art"
+      Whitespace@16..17 " "
+      NounExpr@17..23
+        Article@17..18 "a"
+        Whitespace@18..19 " "
+        PositiveNoun@19..23 "lord"
+      Period@23..24 ".""#]],
+        )
+    }
+
+    #[test]
+    fn parse_dialog_2() {
+        check(
+            "Juliet: Thou art a fine lord.",
+            expect![[r#"
+Root@0..29
+  Dialog@0..29
+    Character@0..6 "Juliet"
+    Colon@6..7 ":"
+    Whitespace@7..8 " "
+    Statement@8..29
+      SecondPerson@8..12 "Thou"
+      Whitespace@12..13 " "
+      Be@13..16 "art"
+      Whitespace@16..17 " "
+      NounExpr@17..28
+        Article@17..18 "a"
+        Whitespace@18..19 " "
+        PositiveAdjective@19..23 "fine"
+        Whitespace@23..24 " "
+        PositiveNoun@24..28 "lord"
+      Period@28..29 ".""#]],
+        )
+    }
+
+    #[test]
+    fn parse_dialoge_3() {
+        check(
+            "Juliet: Thou art the sum of a fellow and a fine lord.",
+            expect![[r#"
+Root@0..53
+  Dialog@0..53
+    Character@0..6 "Juliet"
+    Colon@6..7 ":"
+    Whitespace@7..8 " "
+    Statement@8..53
+      SecondPerson@8..12 "Thou"
+      Whitespace@12..13 " "
+      Be@13..16 "art"
+      Whitespace@16..17 " "
+      BinExpr@17..52
+        Article@17..20 "the"
+        Whitespace@20..21 " "
+        Sum@21..24 "sum"
+        Whitespace@24..25 " "
+        Of@25..27 "of"
+        Whitespace@27..28 " "
+        NounExpr@28..36
+          Article@28..29 "a"
+          Whitespace@29..30 " "
+          NeutralNoun@30..36 "fellow"
+        Whitespace@36..37 " "
+        And@37..40 "and"
+        Whitespace@40..41 " "
+        NounExpr@41..52
+          Article@41..42 "a"
+          Whitespace@42..43 " "
+          PositiveAdjective@43..47 "fine"
+          Whitespace@47..48 " "
+          PositiveNoun@48..52 "lord"
+      Period@52..53 ".""#]],
+        )
+    }
+
+    // #[test]
+    // fn parse_dialog_4() {
+    //     check(
+    //         "Juliet: Thou art the square of a fine lord.",
+    //         expect![[r#""#]],
+    //     )
+    // }
 
     #[test]
     fn parse_nothing() {
