@@ -316,9 +316,12 @@ pub(crate) struct Parse {
 }
 
 impl Parse {
+    pub(crate) fn syntax_node(&self) -> SyntaxNode {
+        SyntaxNode::new_root(self.green_node.clone())
+    }
+
     pub(crate) fn debug_tree(&self) -> String {
-        let syntax_node = SyntaxNode::new_root(self.green_node.clone());
-        let tree = format!("{:#?}", syntax_node);
+        let tree = format!("{:#?}", self.syntax_node());
 
         tree[0..tree.len() - 1].to_string()
     }

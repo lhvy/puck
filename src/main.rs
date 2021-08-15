@@ -1,3 +1,4 @@
+mod ast; // Abstract syntax tree
 mod lexer;
 mod parser;
 mod syntax;

@@ -17,3 +17,7 @@ impl rowan::Language for ShakespeareProgrammingLanguage {
 }
 
 pub(crate) type SyntaxNode = rowan::SyntaxNode<ShakespeareProgrammingLanguage>;
+
+pub(crate) type SyntaxElement = rowan::SyntaxElement<ShakespeareProgrammingLanguage>;
+
+pub(crate) type SyntaxToken = rowan::SyntaxToken<ShakespeareProgrammingLanguage>;
