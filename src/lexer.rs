@@ -27,6 +27,7 @@ impl<'a> Iterator for Lexer<'a> {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct Token<'a> {
     pub(crate) kind: SyntaxKind,
     pub(crate) text: &'a str,
@@ -257,7 +258,7 @@ pub(crate) enum SyntaxKind {
     Error,
 }
 
-fn roman_numeral(lex: &mut logos::Lexer<SyntaxKind>) -> bool {
+fn roman_numeral(lex: &mut logos::Lexer<'_, SyntaxKind>) -> bool {
     let slice = lex.slice();
     let regex =
         regex::Regex::new("M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})").unwrap();

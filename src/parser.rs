@@ -12,6 +12,7 @@ pub(crate) struct Parser<'a> {
 impl<'a> Parser<'a> {
     pub(crate) fn new(input: &'a str) -> Self {
         let mut tokens: Vec<_> = Lexer::new(input).collect();
+        //dbg!(&tokens);
         tokens.reverse();
         Self {
             tokens,
@@ -22,27 +23,26 @@ impl<'a> Parser<'a> {
     pub(crate) fn parse(mut self) -> Parse {
         self.start_node(SyntaxKind::Root);
 
-        if self.at(SyntaxKind::Character) {
-            match self.lookahead(1) {
-                Some(SyntaxKind::Colon) => self.parse_dialog(),
-                Some(SyntaxKind::Comma) => self.parse_character_def(),
-                _ => panic!(),
+        loop {
+            if self.at(SyntaxKind::Character) {
+                match self.lookahead(1) {
+                    Some(SyntaxKind::Colon) => self.parse_dialog(),
+                    Some(SyntaxKind::Comma) => self.parse_character_def(),
+                    _ => panic!(),
+                }
+            }
+
+            if self.at(SyntaxKind::LBracket) {
+                self.parse_stage_direction();
+            }
+
+            self.bump_newline();
+            if self.at_eof() {
+                break;
             }
         }
 
-        if self.at(SyntaxKind::LBracket) {
-            self.parse_stage_direction();
-        }
-
         self.finish_node();
-
-        // loop {
-        //     let syntax_kind = match self.lexer.next() {
-        //         None => break,
-        //         Some(syntax_kind) => syntax_kind,
-        //     };
-        //     dbg!(syntax_kind, self.lexer.slice());
-        // }
 
         Parse {
             green_node: self.builder.finish(),
@@ -59,7 +59,6 @@ impl<'a> Parser<'a> {
         while !self.at(SyntaxKind::Newline) && !self.at_eof() {
             self.skip();
         }
-        self.bump_newline();
         self.finish_node();
 
         self.finish_node();
@@ -78,7 +77,6 @@ impl<'a> Parser<'a> {
             self.skip_ws();
         }
 
-        self.bump_newline();
         self.finish_node();
     }
 
@@ -236,7 +234,6 @@ impl<'a> Parser<'a> {
             _ => panic!(),
         }
 
-        self.bump_newline();
         self.finish_node();
     }
 
@@ -321,6 +318,7 @@ impl Parse {
         SyntaxNode::new_root(self.green_node.clone())
     }
 
+    #[cfg(test)]
     pub(crate) fn debug_tree(&self) -> String {
         let tree = format!("{:#?}", self.syntax_node());
 

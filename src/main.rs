@@ -1,4 +1,4 @@
-mod ast; // Abstract syntax tree
+mod ast;
 mod eval;
 mod hir;
 mod lexer;
@@ -8,28 +8,58 @@ mod syntax;
 use crate::eval::Evaluator;
 use crate::parser::Parser;
 use std::io::{self, Write};
+use std::{env, fs};
 
 fn main() -> io::Result<()> {
-    let stdin = io::stdin();
-    let stdout = io::stdout();
-    let mut stdout = stdout.lock();
+    let mut args = env::args();
+    match args.len() {
+        1 => Repl::new().run()?,
+        2 => {
+            let contents = fs::read_to_string(args.nth(1).unwrap())?;
 
-    let mut input = String::new();
+            let parse = Parser::new(&contents).parse();
+            let root = ast::Root::cast(parse.syntax_node()).unwrap();
+            let (items, db) = hir::lower(root);
 
-    let mut evaluator = Evaluator::default();
+            Evaluator::default().eval(&items, db);
+        }
+        _ => eprintln!("Usage: puck [filepath]"),
+    }
 
-    loop {
-        write!(stdout, "→ ")?;
-        stdout.flush()?;
+    Ok(())
+}
 
-        stdin.read_line(&mut input)?;
+struct Repl {
+    stdin: io::Stdin,
+    stdout: io::Stdout,
+    input: String,
+    evaluator: Evaluator,
+}
 
-        let parse = Parser::new(&input).parse();
-        let root = ast::Root::cast(parse.syntax_node()).unwrap();
-        let (items, db) = hir::lower(root);
+impl Repl {
+    fn new() -> Self {
+        Repl {
+            stdin: io::stdin(),
+            stdout: io::stdout(),
+            input: String::new(),
+            evaluator: Evaluator::default(),
+        }
+    }
 
-        evaluator.eval(&items, db);
+    fn run(mut self) -> io::Result<()> {
+        loop {
+            write!(self.stdout, "→ ")?;
+            self.stdout.flush()?;
 
-        input.clear();
+            self.stdin.read_line(&mut self.input)?;
+
+            let parse = Parser::new(&self.input).parse();
+            let root = ast::Root::cast(parse.syntax_node()).unwrap();
+            let (items, db) = hir::lower(root);
+
+            self.evaluator.eval(&items, db);
+
+            self.input.clear();
+        }
     }
 }
