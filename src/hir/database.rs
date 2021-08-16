@@ -1,7 +1,8 @@
 use la_arena::Arena;
 
-use super::{Adjective, Direction, Expr, Item, Noun, Operation, Sentence};
+use super::{Adjective, Direction, Expr, ExprIdx, Item, Noun, Operation, Sentence};
 use crate::ast;
+use std::ops::Index;
 
 #[derive(Debug, Default)]
 pub(crate) struct Database {
@@ -81,5 +82,13 @@ impl Database {
             ast::Noun::Negative => Noun::Negative,
             ast::Noun::Neutral => Noun::Neutral,
         }
+    }
+}
+
+impl Index<ExprIdx> for Database {
+    type Output = Expr;
+
+    fn index(&self, index: ExprIdx) -> &Self::Output {
+        &self.exprs[index]
     }
 }

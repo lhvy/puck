@@ -1,9 +1,11 @@
 mod ast; // Abstract syntax tree
+mod eval;
 mod hir;
 mod lexer;
 mod parser;
 mod syntax;
 
+use crate::eval::Evaluator;
 use crate::parser::Parser;
 use std::io::{self, Write};
 
@@ -14,6 +16,8 @@ fn main() -> io::Result<()> {
 
     let mut input = String::new();
 
+    let mut evaluator = Evaluator::default();
+
     loop {
         write!(stdout, "→ ")?;
         stdout.flush()?;
@@ -21,12 +25,10 @@ fn main() -> io::Result<()> {
         stdin.read_line(&mut input)?;
 
         let parse = Parser::new(&input).parse();
-
-        writeln!(stdout, "{}", parse.debug_tree())?;
-
         let root = ast::Root::cast(parse.syntax_node()).unwrap();
+        let (items, db) = hir::lower(root);
 
-        dbg!(hir::lower(root));
+        evaluator.eval(&items, db);
 
         input.clear();
     }
