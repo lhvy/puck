@@ -75,6 +75,7 @@ impl<'a> Parser<'a> {
 
         while !self.at(SyntaxKind::Newline) && !self.at_eof() {
             self.parse_sentence();
+            self.skip_ws();
         }
 
         self.bump_newline();
@@ -437,6 +438,40 @@ Root@0..24
       Whitespace@15..16 " "
       Nothing@16..23 "nothing"
       Period@23..24 ".""#]],
+        )
+    }
+
+    #[test]
+    fn parse_multiple_sentence() {
+        check(
+            "Juliet: Thou art a lord. Thou art a lord.",
+            expect![[r#"
+Root@0..41
+  Dialog@0..41
+    Character@0..6 "Juliet"
+    Colon@6..7 ":"
+    Whitespace@7..8 " "
+    Statement@8..24
+      SecondPerson@8..12 "Thou"
+      Whitespace@12..13 " "
+      Be@13..16 "art"
+      Whitespace@16..17 " "
+      NounExpr@17..23
+        Article@17..18 "a"
+        Whitespace@18..19 " "
+        PositiveNoun@19..23 "lord"
+      Period@23..24 "."
+    Whitespace@24..25 " "
+    Statement@25..41
+      SecondPerson@25..29 "Thou"
+      Whitespace@29..30 " "
+      Be@30..33 "art"
+      Whitespace@33..34 " "
+      NounExpr@34..40
+        Article@34..35 "a"
+        Whitespace@35..36 " "
+        PositiveNoun@36..40 "lord"
+      Period@40..41 ".""#]],
         )
     }
 

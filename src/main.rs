@@ -1,4 +1,5 @@
 mod ast; // Abstract syntax tree
+mod hir;
 mod lexer;
 mod parser;
 mod syntax;
@@ -22,6 +23,10 @@ fn main() -> io::Result<()> {
         let parse = Parser::new(&input).parse();
 
         writeln!(stdout, "{}", parse.debug_tree())?;
+
+        let root = ast::Root::cast(parse.syntax_node()).unwrap();
+
+        dbg!(hir::lower(root));
 
         input.clear();
     }

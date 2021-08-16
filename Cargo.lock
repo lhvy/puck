@@ -58,6 +58,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7afe4a420e3fe79967a00898cc1f4db7c8a49a9333a29f8a4bd76a253d5cd04"
 
 [[package]]
+name = "la-arena"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d43db9f547ba2787bdeac81ef97ccc80784f385b3b39b4d50344270629a2bee3"
+
+[[package]]
 name = "logos"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -136,6 +142,7 @@ name = "puck"
 version = "0.1.0"
 dependencies = [
  "expect-test",
+ "la-arena",
  "logos",
  "num-derive",
  "num-traits",

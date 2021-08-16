@@ -162,14 +162,18 @@ impl NounExpr {
 }
 
 #[derive(Debug)]
-pub(crate) struct Adjective(SyntaxToken);
+pub(crate) enum Adjective {
+    Positive,
+    Negative,
+    Neutral,
+}
 
 impl Adjective {
     pub(crate) fn cast(token: SyntaxToken) -> Option<Self> {
         match token.kind() {
-            SyntaxKind::PositiveAdjective
-            | SyntaxKind::NegativeAdjective
-            | SyntaxKind::NeutralAdjective => Some(Self(token)),
+            SyntaxKind::PositiveAdjective => Some(Self::Positive),
+            SyntaxKind::NegativeAdjective => Some(Self::Negative),
+            SyntaxKind::NeutralAdjective => Some(Self::Neutral),
             _ => None,
         }
     }
@@ -215,14 +219,18 @@ impl BinExpr {
 }
 
 #[derive(Debug)]
-pub(crate) struct Noun(SyntaxToken);
+pub(crate) enum Noun {
+    Positive,
+    Negative,
+    Neutral,
+}
 
 impl Noun {
     pub(crate) fn cast(token: SyntaxToken) -> Option<Self> {
         match token.kind() {
-            SyntaxKind::PositiveNoun | SyntaxKind::NegativeNoun | SyntaxKind::NeutralNoun => {
-                Some(Self(token))
-            }
+            SyntaxKind::PositiveNoun => Some(Self::Positive),
+            SyntaxKind::NegativeNoun => Some(Self::Negative),
+            SyntaxKind::NeutralNoun => Some(Self::Neutral),
             _ => None,
         }
     }
