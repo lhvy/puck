@@ -12,7 +12,6 @@ pub(crate) struct Parser<'a> {
 impl<'a> Parser<'a> {
     pub(crate) fn new(input: &'a str) -> Self {
         let mut tokens: Vec<_> = Lexer::new(input).collect();
-        //dbg!(&tokens);
         tokens.reverse();
         Self {
             tokens,

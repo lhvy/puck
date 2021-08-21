@@ -1,8 +1,8 @@
-mod ast;
+mod ast; // Abstract Syntax Tree
 mod eval;
-mod hir;
+mod hir; // High-level Intermediate Representation
 mod lexer;
-mod parser;
+mod parser; // Creates a Concrete Syntax Tree
 mod syntax;
 
 use crate::eval::Evaluator;
