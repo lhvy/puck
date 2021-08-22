@@ -9,6 +9,7 @@ version = "0.1.0"
 arrayvec = "0.7.1"
 la-arena = "0.2.1"
 logos = "0.12.0"
+mimalloc = {version = "0.1.25", default-features = false}
 num-derive = "0.3.3"
 num-traits = "0.2.14"
 regex = "1.5.4"
@@ -16,3 +17,7 @@ rowan = "0.12.6"
 
 [dev-dependencies]
 expect-test = "1.1.0"
+
+[profile.release]
+codegen-units = 1
+lto = "fat"

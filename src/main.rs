@@ -7,8 +7,12 @@ mod syntax;
 
 use crate::eval::Evaluator;
 use crate::parser::Parser;
+use mimalloc::MiMalloc;
 use std::io::{self, Write};
 use std::{env, fs};
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 fn main() -> io::Result<()> {
     let mut args = env::args();
