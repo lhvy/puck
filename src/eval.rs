@@ -99,6 +99,7 @@ impl Evaluator {
                     hir::Operation::Sum => lhs + rhs,
                 }
             }
+            hir::Expr::Nothing => 0,
         }
     }
 }

@@ -51,6 +51,8 @@ pub(crate) enum SyntaxKind {
 
     BinExpr,
 
+    NothingExpr,
+
     Statement,
 
     #[regex("(?i)(am|are|art|be|is)")]

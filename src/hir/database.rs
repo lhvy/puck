@@ -65,6 +65,7 @@ impl Database {
                     rhs: self.exprs.alloc(rhs),
                 }
             }
+            ast::Expr::Nothing(_) => Expr::Nothing,
         }
     }
 

@@ -104,7 +104,9 @@ impl<'a> Parser<'a> {
 
     fn parse_expr(&mut self) {
         if self.at(SyntaxKind::Nothing) {
+            self.start_node(SyntaxKind::NothingExpr);
             self.bump();
+            self.finish_node();
             return;
         }
 
@@ -362,13 +364,13 @@ Root@0..13
             "Juliet, act\n",
             expect![[r#"
 Root@0..12
-  CharacterDef@0..12
+  CharacterDef@0..11
     Character@0..6 "Juliet"
-    Comment@6..12
+    Comment@6..11
       Comma@6..7 ","
       Skip@7..8 " "
       Skip@8..11 "act"
-      Newline@11..12 "\n""#]],
+  Newline@11..12 "\n""#]],
         )
     }
 
@@ -433,7 +435,8 @@ Root@0..24
       Whitespace@11..12 " "
       Be@12..15 "are"
       Whitespace@15..16 " "
-      Nothing@16..23 "nothing"
+      NothingExpr@16..23
+        Nothing@16..23 "nothing"
       Period@23..24 ".""#]],
         )
     }

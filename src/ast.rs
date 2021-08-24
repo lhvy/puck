@@ -128,6 +128,7 @@ impl Statement {
 pub(crate) enum Expr {
     Noun(NounExpr),
     Bin(BinExpr),
+    Nothing(NothingExpr),
 }
 
 impl Expr {
@@ -135,6 +136,7 @@ impl Expr {
         let result = match node.kind() {
             SyntaxKind::NounExpr => Self::Noun(NounExpr(node)),
             SyntaxKind::BinExpr => Self::Bin(BinExpr(node)),
+            SyntaxKind::NothingExpr => Self::Nothing(NothingExpr(node)),
             _ => return None,
         };
 
@@ -217,6 +219,9 @@ impl BinExpr {
         self.0.children().filter_map(Expr::cast).nth(1) // Second expr should be rhs
     }
 }
+
+#[derive(Debug)]
+pub(crate) struct NothingExpr(SyntaxNode);
 
 #[derive(Debug)]
 pub(crate) enum Noun {
