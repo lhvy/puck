@@ -82,7 +82,8 @@ impl<'a> Parser<'a> {
     fn parse_sentence(&mut self) {
         match self.peek() {
             Some(SyntaxKind::SecondPerson) => self.parse_statement(),
-            Some(SyntaxKind::Open | SyntaxKind::Speak) => todo!(),
+            Some(SyntaxKind::Open) => self.parse_int_output(),
+            Some(SyntaxKind::Speak) => self.parse_char_output(),
             _ => panic!(),
         }
     }
@@ -202,6 +203,38 @@ impl<'a> Parser<'a> {
 
         self.parse_expr();
 
+        self.finish_node();
+    }
+
+    fn parse_int_output(&mut self) {
+        assert!(self.at(SyntaxKind::Open));
+        self.start_node(SyntaxKind::IntOutput);
+        self.bump();
+        self.skip_ws();
+
+        self.expect(SyntaxKind::SecondPersonPossessive);
+        self.skip_ws();
+
+        self.expect(SyntaxKind::Heart);
+        self.skip_ws();
+
+        self.expect(SyntaxKind::Period);
+        self.finish_node();
+    }
+
+    fn parse_char_output(&mut self) {
+        assert!(self.at(SyntaxKind::Speak));
+        self.start_node(SyntaxKind::CharOutput);
+        self.bump();
+        self.skip_ws();
+
+        self.expect(SyntaxKind::SecondPersonPossessive);
+        self.skip_ws();
+
+        self.expect(SyntaxKind::Mind);
+        self.skip_ws();
+
+        self.expect(SyntaxKind::Period);
         self.finish_node();
     }
 
@@ -574,5 +607,45 @@ Root@0..53
     #[test]
     fn parse_nothing() {
         check("", expect![[r#"Root@0..0"#]])
+    }
+
+    #[test]
+    fn parse_num_output() {
+        check(
+            "Juliet: Open your heart.",
+            expect![[r#"
+Root@0..24
+  Dialog@0..24
+    Character@0..6 "Juliet"
+    Colon@6..7 ":"
+    Whitespace@7..8 " "
+    IntOutput@8..24
+      Open@8..12 "Open"
+      Whitespace@12..13 " "
+      SecondPersonPossessive@13..17 "your"
+      Whitespace@17..18 " "
+      Heart@18..23 "heart"
+      Period@23..24 ".""#]],
+        )
+    }
+
+    #[test]
+    fn parse_char_output() {
+        check(
+            "Juliet: Speak your mind.",
+            expect![[r#"
+Root@0..24
+  Dialog@0..24
+    Character@0..6 "Juliet"
+    Colon@6..7 ":"
+    Whitespace@7..8 " "
+    CharOutput@8..24
+      Speak@8..13 "Speak"
+      Whitespace@13..14 " "
+      SecondPersonPossessive@14..18 "your"
+      Whitespace@18..19 " "
+      Mind@19..23 "mind"
+      Period@23..24 ".""#]],
+        )
     }
 }

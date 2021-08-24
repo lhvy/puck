@@ -38,6 +38,8 @@ impl Database {
             ast::Sentence::Statement(statement) => Sentence::Statement {
                 expr: self.lower_expr(statement.expr().unwrap()),
             },
+            ast::Sentence::IntOutput(_) => Sentence::IntOutput,
+            ast::Sentence::CharOutput(_) => Sentence::CharOutput,
         }
     }
 

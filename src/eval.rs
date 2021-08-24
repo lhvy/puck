@@ -1,6 +1,7 @@
 use crate::hir;
 use arrayvec::ArrayVec;
 use std::collections::HashMap;
+use std::convert::TryInto;
 
 #[derive(Debug, Default)]
 pub(crate) struct Evaluator {
@@ -65,6 +66,18 @@ impl Evaluator {
                                     "{} set to {} by {}",
                                     listener, self.states[&listener].value, speaker
                                 );
+                            }
+                            hir::Sentence::IntOutput => {
+                                println!("{}", self.states[&listener].value)
+                            }
+                            hir::Sentence::CharOutput => {
+                                println!(
+                                    "{}",
+                                    char::from_u32(
+                                        self.states[&listener].value.try_into().unwrap()
+                                    )
+                                    .unwrap()
+                                )
                             }
                         }
                     }

@@ -55,6 +55,10 @@ pub(crate) enum SyntaxKind {
 
     Statement,
 
+    IntOutput,
+
+    CharOutput,
+
     #[regex("(?i)(am|are|art|be|is)")]
     Be,
 

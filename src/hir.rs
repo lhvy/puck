@@ -35,6 +35,8 @@ pub(crate) enum Direction {
 #[derive(Debug)]
 pub(crate) enum Sentence {
     Statement { expr: Expr },
+    IntOutput,
+    CharOutput,
 }
 
 type ExprIdx = Idx<Expr>;

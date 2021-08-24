@@ -102,12 +102,16 @@ impl Dialog {
 #[derive(Debug)]
 pub(crate) enum Sentence {
     Statement(Statement),
+    IntOutput(IntOutput),
+    CharOutput(CharOutput),
 }
 
 impl Sentence {
     pub(crate) fn cast(node: SyntaxNode) -> Option<Self> {
         let result = match node.kind() {
             SyntaxKind::Statement => Self::Statement(Statement(node)),
+            SyntaxKind::IntOutput => Self::IntOutput(IntOutput(node)),
+            SyntaxKind::CharOutput => Self::CharOutput(CharOutput(node)),
             _ => return None,
         };
 
@@ -249,6 +253,12 @@ pub(crate) enum Operation {
     Sum,
     Remainder,
 }
+
+#[derive(Debug)]
+pub(crate) struct IntOutput(SyntaxNode);
+
+#[derive(Debug)]
+pub(crate) struct CharOutput(SyntaxNode);
 
 #[cfg(test)]
 mod tests {
