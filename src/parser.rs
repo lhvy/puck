@@ -341,12 +341,12 @@ mod tests {
     #[test]
     fn parse_character_def() {
         check(
-            "Romeo, a test",
+            "Romeo, a test.",
             expect![[r#"
-Root@0..13
-  CharacterDef@0..13
+Root@0..14
+  CharacterDef@0..14
     Character@0..5 "Romeo"
-    Comment@5..13
+    Comment@5..14
       Comma@5..6 ","
       Skip@6..7 " "
       Skip@7..8 "a"
@@ -354,7 +354,8 @@ Root@0..13
       Skip@9..10 "t"
       Skip@10..11 "e"
       Skip@11..12 "s"
-      Skip@12..13 "t""#]],
+      Skip@12..13 "t"
+      Skip@13..14 ".""#]],
         )
     }
 
