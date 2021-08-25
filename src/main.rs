@@ -6,7 +6,7 @@ mod parser; // Creates a Concrete Syntax Tree
 mod syntax;
 
 use crate::eval::Evaluator;
-use crate::parser::Parser;
+use crate::parser::parse;
 use mimalloc::MiMalloc;
 use std::io::{self, Write};
 use std::{env, fs};
@@ -21,7 +21,7 @@ fn main() -> io::Result<()> {
         2 => {
             let contents = fs::read_to_string(args.nth(1).unwrap())?;
 
-            let parse = Parser::new(&contents).parse();
+            let parse = parse(&contents);
             let root = ast::Root::cast(parse.syntax_node()).unwrap();
             let (items, db) = hir::lower(root);
 
@@ -57,7 +57,7 @@ impl Repl {
 
             self.stdin.read_line(&mut self.input)?;
 
-            let parse = Parser::new(&self.input).parse();
+            let parse = parse(&self.input);
             let root = ast::Root::cast(parse.syntax_node()).unwrap();
             let (items, db) = hir::lower(root);
 

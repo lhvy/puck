@@ -1,16 +1,19 @@
 use super::event::Event;
+use crate::lexer::Token;
 use crate::syntax::ShakespeareProgrammingLanguage;
 use rowan::{GreenNode, GreenNodeBuilder, Language};
 
-pub(super) struct Sink<'a> {
+pub(super) struct Sink<'tokens, 'input> {
     builder: GreenNodeBuilder<'static>,
-    events: Vec<Event<'a>>,
+    tokens: &'tokens [Token<'input>],
+    events: Vec<Event<'input>>,
 }
 
-impl<'a> Sink<'a> {
-    pub(super) fn new(events: Vec<Event<'a>>) -> Self {
+impl<'tokens, 'input> Sink<'tokens, 'input> {
+    pub(super) fn new(tokens: &'tokens [Token<'input>], events: Vec<Event<'input>>) -> Self {
         Self {
             builder: GreenNodeBuilder::new(),
+            tokens,
             events,
         }
     }

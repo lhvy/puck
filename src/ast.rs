@@ -263,11 +263,11 @@ pub(crate) struct CharOutput(SyntaxNode);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::Parser;
+    use crate::parser::parse;
 
     #[test]
     fn character_def() {
-        let syntax_node = Parser::new("Romeo, a test").parse().syntax_node();
+        let syntax_node = parse("Romeo, a test").syntax_node();
         let root = Root::cast(syntax_node).unwrap();
         let item = root.items().next().unwrap();
 

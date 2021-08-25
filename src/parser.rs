@@ -9,22 +9,33 @@ use event::Event;
 use rowan::GreenNode;
 use sink::Sink;
 
-pub(crate) struct Parser<'a> {
-    tokens: Vec<Token<'a>>,
-    events: Vec<Event<'a>>,
+pub(crate) fn parse(input: &str) -> Parse {
+    let tokens: Vec<_> = Lexer::new(input).collect();
+    let parser = Parser::new(&tokens);
+    let events = parser.parse();
+    let sink = Sink::new(&tokens, events);
+
+    Parse {
+        green_node: sink.finish(),
+    }
 }
 
-impl<'a> Parser<'a> {
-    pub(crate) fn new(input: &'a str) -> Self {
-        let mut tokens: Vec<_> = Lexer::new(input).collect();
-        tokens.reverse();
+struct Parser<'tokens, 'input> {
+    tokens: &'tokens [Token<'input>],
+    cursor: usize,
+    events: Vec<Event<'input>>,
+}
+
+impl<'tokens, 'input> Parser<'tokens, 'input> {
+    pub(crate) fn new(tokens: &'tokens [Token<'input>]) -> Self {
         Self {
             tokens,
+            cursor: 0,
             events: Vec::new(),
         }
     }
 
-    pub(crate) fn parse(mut self) -> Parse {
+    pub(crate) fn parse(mut self) -> Vec<Event<'input>> {
         self.start_node(SyntaxKind::Root);
 
         loop {
@@ -48,11 +59,7 @@ impl<'a> Parser<'a> {
 
         self.finish_node();
 
-        let sink = Sink::new(self.events);
-
-        Parse {
-            green_node: sink.finish(),
-        }
+        self.events
     }
 
     fn parse_character_def(&mut self) {
@@ -295,12 +302,14 @@ impl<'a> Parser<'a> {
     }
 
     fn bump(&mut self) {
-        let Token { kind, text } = self.tokens.pop().unwrap();
+        let Token { kind, text } = self.tokens[self.cursor];
+        self.cursor += 1;
         self.events.push(Event::AddToken { kind, text });
     }
 
     fn skip(&mut self) {
-        let Token { text, .. } = self.tokens.pop().unwrap();
+        let Token { text, .. } = self.tokens[self.cursor];
+        self.cursor += 1;
         self.events.push(Event::AddToken {
             kind: SyntaxKind::Skip,
             text,
@@ -322,13 +331,13 @@ impl<'a> Parser<'a> {
     }
 
     fn peek(&mut self) -> Option<SyntaxKind> {
-        self.tokens.last().map(|Token { kind, .. }| *kind)
+        dbg!(self.tokens.get(self.cursor).map(|Token { kind, .. }| *kind))
     }
 
     fn lookahead(&mut self, amount: usize) -> Option<SyntaxKind> {
         assert!(amount > 0, "Use peek instead for amount 0");
         self.tokens
-            .get(self.tokens.len() - amount - 1)
+            .get(self.cursor + amount)
             .map(|Token { kind, .. }| *kind)
     }
 
@@ -372,7 +381,7 @@ mod tests {
     use expect_test::{expect, Expect};
 
     fn check(input: &str, expected_tree: Expect) {
-        let parse = Parser::new(input).parse();
+        let parse = parse(input);
 
         expected_tree.assert_eq(&parse.debug_tree());
     }
