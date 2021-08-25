@@ -50,7 +50,7 @@ impl Evaluator {
                 } => {
                     assert_eq!(self.on_stage.len(), 2);
                     let speaker_idx = self.on_stage.iter().position(|c| c == character).unwrap();
-                    let speaker = self.on_stage[speaker_idx].clone();
+                    let _speaker = self.on_stage[speaker_idx].clone();
                     let listener = match speaker_idx {
                         0 => self.on_stage[1].clone(),
                         1 => self.on_stage[0].clone(),
@@ -62,10 +62,6 @@ impl Evaluator {
                             hir::Sentence::Statement { expr } => {
                                 self.states.get_mut(&listener).unwrap().value =
                                     self.eval_expr(expr, &db);
-                                println!(
-                                    "{} set to {} by {}",
-                                    listener, self.states[&listener].value, speaker
-                                );
                             }
                             hir::Sentence::IntOutput => {
                                 println!("{}", self.states[&listener].value)
