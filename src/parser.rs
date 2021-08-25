@@ -1,12 +1,17 @@
+mod event;
+mod sink;
+
 use crate::{
     lexer::{Lexer, SyntaxKind, Token},
-    syntax::{ShakespeareProgrammingLanguage, SyntaxNode},
+    syntax::SyntaxNode,
 };
-use rowan::{Checkpoint, GreenNode, GreenNodeBuilder, Language};
+use event::Event;
+use rowan::GreenNode;
+use sink::Sink;
 
 pub(crate) struct Parser<'a> {
     tokens: Vec<Token<'a>>,
-    builder: GreenNodeBuilder<'static>,
+    events: Vec<Event<'a>>,
 }
 
 impl<'a> Parser<'a> {
@@ -15,7 +20,7 @@ impl<'a> Parser<'a> {
         tokens.reverse();
         Self {
             tokens,
-            builder: GreenNodeBuilder::new(),
+            events: Vec::new(),
         }
     }
 
@@ -43,8 +48,10 @@ impl<'a> Parser<'a> {
 
         self.finish_node();
 
+        let sink = Sink::new(self.events);
+
         Parse {
-            green_node: self.builder.finish(),
+            green_node: sink.finish(),
         }
     }
 
@@ -115,7 +122,7 @@ impl<'a> Parser<'a> {
             return;
         }
 
-        let checkpoint = self.builder.checkpoint();
+        let checkpoint = self.checkpoint();
 
         self.expect(SyntaxKind::Article);
         self.skip_ws();
@@ -140,7 +147,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_noun_expr(&mut self, checkpoint: Checkpoint) {
+    fn parse_noun_expr(&mut self, checkpoint: usize) {
         self.start_node_at(checkpoint, SyntaxKind::NounExpr);
 
         loop {
@@ -166,7 +173,7 @@ impl<'a> Parser<'a> {
         self.finish_node();
     }
 
-    fn parse_bin_expr(&mut self, checkpoint: Checkpoint) {
+    fn parse_bin_expr(&mut self, checkpoint: usize) {
         self.start_node_at(checkpoint, SyntaxKind::BinExpr);
 
         match self.peek() {
@@ -289,16 +296,15 @@ impl<'a> Parser<'a> {
 
     fn bump(&mut self) {
         let Token { kind, text } = self.tokens.pop().unwrap();
-        self.builder
-            .token(ShakespeareProgrammingLanguage::kind_to_raw(kind), text);
+        self.events.push(Event::AddToken { kind, text });
     }
 
     fn skip(&mut self) {
         let Token { text, .. } = self.tokens.pop().unwrap();
-        self.builder.token(
-            ShakespeareProgrammingLanguage::kind_to_raw(SyntaxKind::Skip),
+        self.events.push(Event::AddToken {
+            kind: SyntaxKind::Skip,
             text,
-        );
+        });
     }
 
     fn skip_ws(&mut self) {
@@ -327,19 +333,19 @@ impl<'a> Parser<'a> {
     }
 
     fn start_node(&mut self, kind: SyntaxKind) {
-        self.builder
-            .start_node(ShakespeareProgrammingLanguage::kind_to_raw(kind));
+        self.events.push(Event::StartNode { kind });
     }
 
-    fn start_node_at(&mut self, checkpoint: Checkpoint, kind: SyntaxKind) {
-        self.builder.start_node_at(
-            checkpoint,
-            ShakespeareProgrammingLanguage::kind_to_raw(kind),
-        );
+    fn start_node_at(&mut self, checkpoint: usize, kind: SyntaxKind) {
+        self.events.push(Event::StartNodeAt { kind, checkpoint });
     }
 
     fn finish_node(&mut self) {
-        self.builder.finish_node();
+        self.events.push(Event::FinishNode);
+    }
+
+    fn checkpoint(&self) -> usize {
+        self.events.len()
     }
 }
 
