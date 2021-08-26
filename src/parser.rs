@@ -1,5 +1,6 @@
 mod event;
 mod sink;
+mod source;
 
 use crate::{
     lexer::{Lexer, SyntaxKind, Token},
@@ -8,6 +9,7 @@ use crate::{
 use event::Event;
 use rowan::GreenNode;
 use sink::Sink;
+use source::Source;
 
 pub(crate) fn parse(input: &str) -> Parse {
     let tokens: Vec<_> = Lexer::new(input).collect();
@@ -21,16 +23,14 @@ pub(crate) fn parse(input: &str) -> Parse {
 }
 
 struct Parser<'tokens, 'input> {
-    tokens: &'tokens [Token<'input>],
-    cursor: usize,
+    source: Source<'tokens, 'input>,
     events: Vec<Event<'input>>,
 }
 
 impl<'tokens, 'input> Parser<'tokens, 'input> {
     pub(crate) fn new(tokens: &'tokens [Token<'input>]) -> Self {
         Self {
-            tokens,
-            cursor: 0,
+            source: Source::new(tokens),
             events: Vec::new(),
         }
     }
@@ -83,11 +83,9 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
         self.bump();
 
         self.expect(SyntaxKind::Colon);
-        self.skip_ws();
 
         while !self.at(SyntaxKind::Newline) && !self.at_eof() {
             self.parse_sentence();
-            self.skip_ws();
         }
 
         self.finish_node();
@@ -106,10 +104,8 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
         assert!(self.at(SyntaxKind::SecondPerson));
         self.start_node(SyntaxKind::Statement);
         self.bump();
-        self.skip_ws();
 
         self.expect(SyntaxKind::Be);
-        self.skip_ws();
 
         self.parse_expr();
         self.expect(SyntaxKind::Period);
@@ -132,7 +128,6 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
         let checkpoint = self.checkpoint();
 
         self.expect(SyntaxKind::Article);
-        self.skip_ws();
 
         match self.peek() {
             Some(
@@ -174,7 +169,6 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
                 ) => self.bump(),
                 _ => panic!(),
             }
-            self.skip_ws();
         }
 
         self.finish_node();
@@ -186,34 +180,25 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
         match self.peek() {
             Some(SyntaxKind::Difference | SyntaxKind::Quotient) => {
                 self.bump();
-                self.skip_ws();
                 self.expect(SyntaxKind::Between);
             }
             Some(SyntaxKind::Product | SyntaxKind::Sum) => {
                 self.bump();
-                self.skip_ws();
                 self.expect(SyntaxKind::Of);
             }
             Some(SyntaxKind::Remainder) => {
                 self.bump();
-                self.skip_ws();
                 self.expect(SyntaxKind::Of);
-                self.skip_ws();
                 self.expect(SyntaxKind::Article);
-                self.skip_ws();
                 self.expect(SyntaxKind::Quotient);
-                self.skip_ws();
                 self.expect(SyntaxKind::Between);
             }
             _ => panic!(),
         }
-        self.skip_ws();
 
         self.parse_expr();
-        self.skip_ws();
 
         self.expect(SyntaxKind::And);
-        self.skip_ws();
 
         self.parse_expr();
 
@@ -224,13 +209,10 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
         assert!(self.at(SyntaxKind::Open));
         self.start_node(SyntaxKind::IntOutput);
         self.bump();
-        self.skip_ws();
 
         self.expect(SyntaxKind::SecondPersonPossessive);
-        self.skip_ws();
 
         self.expect(SyntaxKind::Heart);
-        self.skip_ws();
 
         self.expect(SyntaxKind::Period);
         self.finish_node();
@@ -240,13 +222,10 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
         assert!(self.at(SyntaxKind::Speak));
         self.start_node(SyntaxKind::CharOutput);
         self.bump();
-        self.skip_ws();
 
         self.expect(SyntaxKind::SecondPersonPossessive);
-        self.skip_ws();
 
         self.expect(SyntaxKind::Mind);
-        self.skip_ws();
 
         self.expect(SyntaxKind::Period);
         self.finish_node();
@@ -260,11 +239,9 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
         match self.peek() {
             Some(SyntaxKind::Enter | SyntaxKind::Exit) => {
                 self.bump();
-                self.skip_ws();
 
                 loop {
                     self.expect(SyntaxKind::Character);
-                    self.skip_ws();
 
                     if self.at(SyntaxKind::RBracket) {
                         self.bump();
@@ -272,7 +249,6 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
                     }
 
                     self.expect(SyntaxKind::And);
-                    self.skip_ws();
                 }
             }
             Some(SyntaxKind::Exeunt) => {
@@ -302,24 +278,18 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
     }
 
     fn bump(&mut self) {
-        let Token { kind, text } = self.tokens[self.cursor];
-        self.cursor += 1;
+        let Token { kind, text } = self.source.next_token().unwrap();
+
         self.events.push(Event::AddToken { kind, text });
     }
 
     fn skip(&mut self) {
-        let Token { text, .. } = self.tokens[self.cursor];
-        self.cursor += 1;
+        let Token { text, .. } = self.source.next_token().unwrap();
+
         self.events.push(Event::AddToken {
             kind: SyntaxKind::Skip,
             text,
         });
-    }
-
-    fn skip_ws(&mut self) {
-        while self.at(SyntaxKind::Whitespace) {
-            self.bump();
-        }
     }
 
     fn bump_newline(&mut self) {
@@ -331,14 +301,12 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
     }
 
     fn peek(&mut self) -> Option<SyntaxKind> {
-        dbg!(self.tokens.get(self.cursor).map(|Token { kind, .. }| *kind))
+        self.source.peek()
     }
 
     fn lookahead(&mut self, amount: usize) -> Option<SyntaxKind> {
         assert!(amount > 0, "Use peek instead for amount 0");
-        self.tokens
-            .get(self.cursor + amount)
-            .map(|Token { kind, .. }| *kind)
+        self.source.lookahead(amount)
     }
 
     fn start_node(&mut self, kind: SyntaxKind) {
@@ -396,9 +364,9 @@ Root@0..14
     Character@0..5 "Romeo"
     Comment@5..14
       Comma@5..6 ","
-      Skip@6..7 " "
+      Whitespace@6..7 " "
       Skip@7..8 "a"
-      Skip@8..9 " "
+      Whitespace@8..9 " "
       Skip@9..10 "t"
       Skip@10..11 "e"
       Skip@11..12 "s"
@@ -417,7 +385,7 @@ Root@0..12
     Character@0..6 "Juliet"
     Comment@6..11
       Comma@6..7 ","
-      Skip@7..8 " "
+      Whitespace@7..8 " "
       Skip@8..11 "act"
   Newline@11..12 "\n""#]],
         )
@@ -500,7 +468,7 @@ Root@0..41
     Character@0..6 "Juliet"
     Colon@6..7 ":"
     Whitespace@7..8 " "
-    Statement@8..24
+    Statement@8..25
       SecondPerson@8..12 "Thou"
       Whitespace@12..13 " "
       Be@13..16 "art"
@@ -510,7 +478,7 @@ Root@0..41
         Whitespace@18..19 " "
         PositiveNoun@19..23 "lord"
       Period@23..24 "."
-    Whitespace@24..25 " "
+      Whitespace@24..25 " "
     Statement@25..41
       SecondPerson@25..29 "Thou"
       Whitespace@29..30 " "
@@ -594,11 +562,11 @@ Root@0..53
         Whitespace@24..25 " "
         Of@25..27 "of"
         Whitespace@27..28 " "
-        NounExpr@28..36
+        NounExpr@28..37
           Article@28..29 "a"
           Whitespace@29..30 " "
           NeutralNoun@30..36 "fellow"
-        Whitespace@36..37 " "
+          Whitespace@36..37 " "
         And@37..40 "and"
         Whitespace@40..41 " "
         NounExpr@41..52
@@ -620,8 +588,18 @@ Root@0..53
     // }
 
     #[test]
-    fn parse_nothing() {
+    fn parse_empty_input() {
         check("", expect![[r#"Root@0..0"#]])
+    }
+
+    #[test]
+    fn parse_whitespace() {
+        check(
+            " \t  ",
+            expect![[r#"
+Root@0..4
+  Whitespace@0..4 " \t  ""#]],
+        )
     }
 
     #[test]

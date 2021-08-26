@@ -27,7 +27,7 @@ impl<'a> Iterator for Lexer<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct Token<'a> {
     pub(crate) kind: SyntaxKind,
     pub(crate) text: &'a str,
@@ -254,7 +254,7 @@ pub(crate) enum SyntaxKind {
     #[regex("M*(CM|CD|D?C*)(XC|XL|L?X*)(IX|IV|V?I*)", roman_numeral)]
     RomanNumeral,
 
-    #[regex("( |\t)")]
+    #[regex("( |\t)+")]
     Whitespace,
 
     #[token("\n")]
@@ -357,6 +357,6 @@ mod tests {
         check("square root", SyntaxKind::SquareRoot);
         check("stone wall", SyntaxKind::NeutralNoun);
         check("lady macbeth", SyntaxKind::Character);
-        check(" ", SyntaxKind::Whitespace);
+        check(" \t       ", SyntaxKind::Whitespace);
     }
 }
