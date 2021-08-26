@@ -1,4 +1,5 @@
 use crate::lexer::{SyntaxKind, Token};
+use text_size::TextRange;
 
 pub(super) struct Source<'tokens, 'input> {
     tokens: &'tokens [Token<'input>],
@@ -27,21 +28,38 @@ impl<'tokens, 'input> Source<'tokens, 'input> {
         }
     }
 
-    pub(super) fn peek(&mut self) -> Option<SyntaxKind> {
-        self.lookahead(0)
+    pub(super) fn peek_kind(&self) -> Option<SyntaxKind> {
+        self.lookahead_kind(0)
     }
 
-    pub(super) fn lookahead(&self, mut amount: usize) -> Option<SyntaxKind> {
+    pub(super) fn peek_token(&self) -> Option<Token<'input>> {
+        self.lookahead_token(0)
+    }
+
+    pub(super) fn lookahead_kind(&self, amount: usize) -> Option<SyntaxKind> {
+        let token = self.lookahead_token(amount)?;
+        Some(token.kind)
+    }
+
+    fn lookahead_token(&self, mut amount: usize) -> Option<Token<'input>> {
         let mut idx = self.cursor;
         loop {
-            let kind = self.tokens.get(idx)?.kind;
-            if kind != SyntaxKind::Whitespace {
+            let token = *self.tokens.get(idx)?;
+            if token.kind != SyntaxKind::Whitespace {
                 if amount == 0 {
-                    return Some(kind);
+                    return Some(token);
                 }
                 amount -= 1;
             }
             idx += 1;
         }
+    }
+
+    pub(super) fn final_token_range(&self) -> Option<TextRange> {
+        self.tokens.last().map(|Token { range, .. }| *range)
+    }
+
+    pub(super) fn previous_token_range(&self) -> TextRange {
+        self.tokens[self.cursor - 1].range
     }
 }
