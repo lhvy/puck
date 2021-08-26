@@ -62,14 +62,6 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
         });
     }
 
-    pub(super) fn bump_newline(&mut self) {
-        if self.at_eof() {
-            return;
-        }
-
-        self.expect(SyntaxKind::Newline)
-    }
-
     pub(super) fn peek(&mut self) -> Option<SyntaxKind> {
         self.source.peek()
     }

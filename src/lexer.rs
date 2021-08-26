@@ -254,11 +254,8 @@ pub(crate) enum SyntaxKind {
     #[regex("M*(CM|CD|D?C*)(XC|XL|L?X*)(IX|IV|V?I*)", roman_numeral)]
     RomanNumeral,
 
-    #[regex("( |\t)+")]
+    #[regex("( |\t|\n)+")]
     Whitespace,
-
-    #[token("\n")]
-    Newline,
 
     #[error]
     Error,

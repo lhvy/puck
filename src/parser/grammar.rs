@@ -17,7 +17,6 @@ pub(super) fn root(p: &mut Parser<'_, '_>) {
             parse_stage_direction(p);
         }
 
-        p.bump_newline();
         if p.at_eof() {
             break;
         }
@@ -33,9 +32,11 @@ fn parse_character_def(p: &mut Parser<'_, '_>) {
 
     let m_comment = p.start();
     p.expect(SyntaxKind::Comma);
-    while !p.at(SyntaxKind::Newline) && !p.at_eof() {
+    while !p.at(SyntaxKind::Period) && !p.at(SyntaxKind::Exclamation) && !p.at_eof() {
         p.skip();
     }
+    parse_terminator(p);
+
     m_comment.complete(p, SyntaxKind::Comment);
 
     m_def.complete(p, SyntaxKind::CharacterDef);
@@ -48,20 +49,20 @@ fn parse_dialog(p: &mut Parser<'_, '_>) {
 
     p.expect(SyntaxKind::Colon);
 
-    while !p.at(SyntaxKind::Newline) && !p.at_eof() {
-        parse_sentence(p);
-    }
+    while parse_sentence(p) {}
 
     m.complete(p, SyntaxKind::Dialog);
 }
 
-fn parse_sentence(p: &mut Parser<'_, '_>) {
+fn parse_sentence(p: &mut Parser<'_, '_>) -> bool {
     match p.peek() {
         Some(SyntaxKind::SecondPerson) => parse_statement(p),
         Some(SyntaxKind::Open) => parse_int_output(p),
         Some(SyntaxKind::Speak) => parse_char_output(p),
-        _ => panic!(),
+        _ => return false,
     }
+
+    true
 }
 
 fn parse_statement(p: &mut Parser<'_, '_>) {
@@ -256,23 +257,66 @@ Root@0..14
       Skip@10..11 "e"
       Skip@11..12 "s"
       Skip@12..13 "t"
-      Skip@13..14 ".""#]],
+      Period@13..14 ".""#]],
         )
     }
 
     #[test]
-    fn parse_character_def_with_newline() {
+    fn parse_character_def_exclamation() {
         check(
-            "Juliet, act\n",
+            "Romeo, a test!",
             expect![[r#"
-Root@0..12
-  CharacterDef@0..11
+Root@0..14
+  CharacterDef@0..14
+    Character@0..5 "Romeo"
+    Comment@5..14
+      Comma@5..6 ","
+      Whitespace@6..7 " "
+      Skip@7..8 "a"
+      Whitespace@8..9 " "
+      Skip@9..10 "t"
+      Skip@10..11 "e"
+      Skip@11..12 "s"
+      Skip@12..13 "t"
+      Exclamation@13..14 "!""#]],
+        )
+    }
+
+    #[test]
+    fn parse_character_def_whitespace() {
+        check(
+            "Juliet, act.\n",
+            expect![[r#"
+Root@0..13
+  CharacterDef@0..13
     Character@0..6 "Juliet"
-    Comment@6..11
+    Comment@6..13
       Comma@6..7 ","
       Whitespace@7..8 " "
       Skip@8..11 "act"
-  Newline@11..12 "\n""#]],
+      Period@11..12 "."
+      Whitespace@12..13 "\n""#]],
+        )
+    }
+
+    #[test]
+    fn parse_character_def_newline_comment() {
+        check(
+            "Romeo, a\ntest.",
+            expect![[r#"
+Root@0..14
+  CharacterDef@0..14
+    Character@0..5 "Romeo"
+    Comment@5..14
+      Comma@5..6 ","
+      Whitespace@6..7 " "
+      Skip@7..8 "a"
+      Whitespace@8..9 "\n"
+      Skip@9..10 "t"
+      Skip@10..11 "e"
+      Skip@11..12 "s"
+      Skip@12..13 "t"
+      Period@13..14 ".""#]],
         )
     }
 
@@ -524,6 +568,40 @@ Root@0..24
       Whitespace@18..19 " "
       Mind@19..23 "mind"
       Period@23..24 ".""#]],
+        )
+    }
+
+    #[test]
+    fn parse_multiple_sentence_with_spaces() {
+        check(
+            "Juliet: Thou art a lord.\n Thou \t\t\n\t  art a \tlord.",
+            expect![[r#"
+Root@0..49
+  Dialog@0..49
+    Character@0..6 "Juliet"
+    Colon@6..7 ":"
+    Whitespace@7..8 " "
+    Statement@8..26
+      SecondPerson@8..12 "Thou"
+      Whitespace@12..13 " "
+      Be@13..16 "art"
+      Whitespace@16..17 " "
+      NounExpr@17..23
+        Article@17..18 "a"
+        Whitespace@18..19 " "
+        PositiveNoun@19..23 "lord"
+      Period@23..24 "."
+      Whitespace@24..26 "\n "
+    Statement@26..49
+      SecondPerson@26..30 "Thou"
+      Whitespace@30..37 " \t\t\n\t  "
+      Be@37..40 "art"
+      Whitespace@40..41 " "
+      NounExpr@41..48
+        Article@41..42 "a"
+        Whitespace@42..44 " \t"
+        PositiveNoun@44..48 "lord"
+      Period@48..49 ".""#]],
         )
     }
 }
