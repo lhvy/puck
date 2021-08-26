@@ -72,7 +72,7 @@ fn parse_statement(p: &mut Parser<'_, '_>) {
     p.expect(SyntaxKind::Be);
 
     parse_expr(p);
-    p.expect(SyntaxKind::Period);
+    parse_terminator(p);
 
     m.complete(p, SyntaxKind::Statement);
 }
@@ -85,7 +85,7 @@ fn parse_expr(p: &mut Parser<'_, '_>) {
         return;
     }
 
-    if p.at(SyntaxKind::Period) {
+    if p.at(SyntaxKind::Period) | p.at(SyntaxKind::Exclamation) {
         return;
     }
 
@@ -174,7 +174,7 @@ fn parse_int_output(p: &mut Parser<'_, '_>) {
 
     p.expect(SyntaxKind::Heart);
 
-    p.expect(SyntaxKind::Period);
+    parse_terminator(p);
     m.complete(p, SyntaxKind::IntOutput);
 }
 
@@ -187,8 +187,15 @@ fn parse_char_output(p: &mut Parser<'_, '_>) {
 
     p.expect(SyntaxKind::Mind);
 
-    p.expect(SyntaxKind::Period);
+    parse_terminator(p);
     m.complete(p, SyntaxKind::CharOutput);
+}
+
+fn parse_terminator(p: &mut Parser<'_, '_>) {
+    match p.peek() {
+        Some(SyntaxKind::Period | SyntaxKind::Exclamation) => p.bump(),
+        _ => panic!(),
+    }
 }
 
 fn parse_stage_direction(p: &mut Parser<'_, '_>) {
@@ -219,4 +226,304 @@ fn parse_stage_direction(p: &mut Parser<'_, '_>) {
     }
 
     m.complete(p, SyntaxKind::StageDirection);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::parse;
+    use expect_test::{expect, Expect};
+
+    fn check(input: &str, expected_tree: Expect) {
+        let parse = parse(input);
+
+        expected_tree.assert_eq(&parse.debug_tree());
+    }
+
+    #[test]
+    fn parse_character_def() {
+        check(
+            "Romeo, a test.",
+            expect![[r#"
+Root@0..14
+  CharacterDef@0..14
+    Character@0..5 "Romeo"
+    Comment@5..14
+      Comma@5..6 ","
+      Whitespace@6..7 " "
+      Skip@7..8 "a"
+      Whitespace@8..9 " "
+      Skip@9..10 "t"
+      Skip@10..11 "e"
+      Skip@11..12 "s"
+      Skip@12..13 "t"
+      Skip@13..14 ".""#]],
+        )
+    }
+
+    #[test]
+    fn parse_character_def_with_newline() {
+        check(
+            "Juliet, act\n",
+            expect![[r#"
+Root@0..12
+  CharacterDef@0..11
+    Character@0..6 "Juliet"
+    Comment@6..11
+      Comma@6..7 ","
+      Whitespace@7..8 " "
+      Skip@8..11 "act"
+  Newline@11..12 "\n""#]],
+        )
+    }
+
+    #[test]
+    fn parse_enter_characters() {
+        check(
+            "[Enter Hamlet and Romeo]",
+            expect![[r#"
+Root@0..24
+  StageDirection@0..24
+    LBracket@0..1 "["
+    Enter@1..6 "Enter"
+    Whitespace@6..7 " "
+    Character@7..13 "Hamlet"
+    Whitespace@13..14 " "
+    And@14..17 "and"
+    Whitespace@17..18 " "
+    Character@18..23 "Romeo"
+    RBracket@23..24 "]""#]],
+        )
+    }
+
+    #[test]
+    fn parse_exit_characters() {
+        check(
+            "[Exit Juliet]",
+            expect![[r#"
+Root@0..13
+  StageDirection@0..13
+    LBracket@0..1 "["
+    Exit@1..5 "Exit"
+    Whitespace@5..6 " "
+    Character@6..12 "Juliet"
+    RBracket@12..13 "]""#]],
+        )
+    }
+    #[test]
+    fn parse_exeunt() {
+        check(
+            "[Exeunt]",
+            expect![[r#"
+Root@0..8
+  StageDirection@0..8
+    LBracket@0..1 "["
+    Exeunt@1..7 "Exeunt"
+    RBracket@7..8 "]""#]],
+        )
+    }
+
+    #[test]
+    fn parse_dialog_0() {
+        check(
+            "Juliet: You are nothing.",
+            expect![[r#"
+Root@0..24
+  Dialog@0..24
+    Character@0..6 "Juliet"
+    Colon@6..7 ":"
+    Whitespace@7..8 " "
+    Statement@8..24
+      SecondPerson@8..11 "You"
+      Whitespace@11..12 " "
+      Be@12..15 "are"
+      Whitespace@15..16 " "
+      NothingExpr@16..23
+        Nothing@16..23 "nothing"
+      Period@23..24 ".""#]],
+        )
+    }
+
+    #[test]
+    fn parse_multiple_sentence() {
+        check(
+            "Juliet: Thou art a lord. Thou art a lord.",
+            expect![[r#"
+Root@0..41
+  Dialog@0..41
+    Character@0..6 "Juliet"
+    Colon@6..7 ":"
+    Whitespace@7..8 " "
+    Statement@8..25
+      SecondPerson@8..12 "Thou"
+      Whitespace@12..13 " "
+      Be@13..16 "art"
+      Whitespace@16..17 " "
+      NounExpr@17..23
+        Article@17..18 "a"
+        Whitespace@18..19 " "
+        PositiveNoun@19..23 "lord"
+      Period@23..24 "."
+      Whitespace@24..25 " "
+    Statement@25..41
+      SecondPerson@25..29 "Thou"
+      Whitespace@29..30 " "
+      Be@30..33 "art"
+      Whitespace@33..34 " "
+      NounExpr@34..40
+        Article@34..35 "a"
+        Whitespace@35..36 " "
+        PositiveNoun@36..40 "lord"
+      Period@40..41 ".""#]],
+        )
+    }
+
+    #[test]
+    fn parse_dialog_1() {
+        check(
+            "Juliet: Thou art a lord.",
+            expect![[r#"
+Root@0..24
+  Dialog@0..24
+    Character@0..6 "Juliet"
+    Colon@6..7 ":"
+    Whitespace@7..8 " "
+    Statement@8..24
+      SecondPerson@8..12 "Thou"
+      Whitespace@12..13 " "
+      Be@13..16 "art"
+      Whitespace@16..17 " "
+      NounExpr@17..23
+        Article@17..18 "a"
+        Whitespace@18..19 " "
+        PositiveNoun@19..23 "lord"
+      Period@23..24 ".""#]],
+        )
+    }
+
+    #[test]
+    fn parse_dialog_2() {
+        check(
+            "Juliet: Thou art a fine lord.",
+            expect![[r#"
+Root@0..29
+  Dialog@0..29
+    Character@0..6 "Juliet"
+    Colon@6..7 ":"
+    Whitespace@7..8 " "
+    Statement@8..29
+      SecondPerson@8..12 "Thou"
+      Whitespace@12..13 " "
+      Be@13..16 "art"
+      Whitespace@16..17 " "
+      NounExpr@17..28
+        Article@17..18 "a"
+        Whitespace@18..19 " "
+        PositiveAdjective@19..23 "fine"
+        Whitespace@23..24 " "
+        PositiveNoun@24..28 "lord"
+      Period@28..29 ".""#]],
+        )
+    }
+
+    #[test]
+    fn parse_dialoge_3() {
+        check(
+            "Juliet: Thou art the sum of a fellow and a fine lord.",
+            expect![[r#"
+Root@0..53
+  Dialog@0..53
+    Character@0..6 "Juliet"
+    Colon@6..7 ":"
+    Whitespace@7..8 " "
+    Statement@8..53
+      SecondPerson@8..12 "Thou"
+      Whitespace@12..13 " "
+      Be@13..16 "art"
+      Whitespace@16..17 " "
+      BinExpr@17..52
+        Article@17..20 "the"
+        Whitespace@20..21 " "
+        Sum@21..24 "sum"
+        Whitespace@24..25 " "
+        Of@25..27 "of"
+        Whitespace@27..28 " "
+        NounExpr@28..37
+          Article@28..29 "a"
+          Whitespace@29..30 " "
+          NeutralNoun@30..36 "fellow"
+          Whitespace@36..37 " "
+        And@37..40 "and"
+        Whitespace@40..41 " "
+        NounExpr@41..52
+          Article@41..42 "a"
+          Whitespace@42..43 " "
+          PositiveAdjective@43..47 "fine"
+          Whitespace@47..48 " "
+          PositiveNoun@48..52 "lord"
+      Period@52..53 ".""#]],
+        )
+    }
+
+    // #[test]
+    // fn parse_dialog_4() {
+    //     check(
+    //         "Juliet: Thou art the square of a fine lord.",
+    //         expect![[r#""#]],
+    //     )
+    // }
+
+    #[test]
+    fn parse_empty_input() {
+        check("", expect![[r#"Root@0..0"#]])
+    }
+
+    #[test]
+    fn parse_whitespace() {
+        check(
+            " \t  ",
+            expect![[r#"
+Root@0..4
+  Whitespace@0..4 " \t  ""#]],
+        )
+    }
+
+    #[test]
+    fn parse_num_output() {
+        check(
+            "Juliet: Open your heart!",
+            expect![[r#"
+Root@0..24
+  Dialog@0..24
+    Character@0..6 "Juliet"
+    Colon@6..7 ":"
+    Whitespace@7..8 " "
+    IntOutput@8..24
+      Open@8..12 "Open"
+      Whitespace@12..13 " "
+      SecondPersonPossessive@13..17 "your"
+      Whitespace@17..18 " "
+      Heart@18..23 "heart"
+      Exclamation@23..24 "!""#]],
+        )
+    }
+
+    #[test]
+    fn parse_char_output() {
+        check(
+            "Juliet: Speak your mind.",
+            expect![[r#"
+Root@0..24
+  Dialog@0..24
+    Character@0..6 "Juliet"
+    Colon@6..7 ":"
+    Whitespace@7..8 " "
+    CharOutput@8..24
+      Speak@8..13 "Speak"
+      Whitespace@13..14 " "
+      SecondPersonPossessive@14..18 "your"
+      Whitespace@18..19 " "
+      Mind@19..23 "mind"
+      Period@23..24 ".""#]],
+        )
+    }
 }
