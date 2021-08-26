@@ -1,4 +1,5 @@
 mod event;
+mod marker;
 mod sink;
 mod source;
 
@@ -7,6 +8,7 @@ use crate::{
     syntax::SyntaxNode,
 };
 use event::Event;
+use marker::Marker;
 use rowan::GreenNode;
 use sink::Sink;
 use source::Source;
@@ -28,15 +30,22 @@ struct Parser<'tokens, 'input> {
 }
 
 impl<'tokens, 'input> Parser<'tokens, 'input> {
-    pub(crate) fn new(tokens: &'tokens [Token<'input>]) -> Self {
+    fn new(tokens: &'tokens [Token<'input>]) -> Self {
         Self {
             source: Source::new(tokens),
             events: Vec::new(),
         }
     }
 
-    pub(crate) fn parse(mut self) -> Vec<Event<'input>> {
-        self.start_node(SyntaxKind::Root);
+    fn start(&mut self) -> Marker {
+        let pos = self.events.len();
+        self.events.push(Event::MarkerPlaceholder);
+
+        Marker::new(pos)
+    }
+
+    fn parse(mut self) -> Vec<Event<'input>> {
+        let m = self.start();
 
         loop {
             if self.at(SyntaxKind::Character) {
@@ -57,29 +66,29 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
             }
         }
 
-        self.finish_node();
+        m.complete(&mut self, SyntaxKind::Root);
 
         self.events
     }
 
     fn parse_character_def(&mut self) {
         assert!(self.at(SyntaxKind::Character));
-        self.start_node(SyntaxKind::CharacterDef);
+        let m_def = self.start();
         self.bump();
 
-        self.start_node(SyntaxKind::Comment);
+        let m_comment = self.start();
         self.expect(SyntaxKind::Comma);
         while !self.at(SyntaxKind::Newline) && !self.at_eof() {
             self.skip();
         }
-        self.finish_node();
+        m_comment.complete(self, SyntaxKind::Comment);
 
-        self.finish_node();
+        m_def.complete(self, SyntaxKind::CharacterDef);
     }
 
     fn parse_dialog(&mut self) {
         assert!(self.at(SyntaxKind::Character));
-        self.start_node(SyntaxKind::Dialog);
+        let m = self.start();
         self.bump();
 
         self.expect(SyntaxKind::Colon);
@@ -88,7 +97,7 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
             self.parse_sentence();
         }
 
-        self.finish_node();
+        m.complete(self, SyntaxKind::Dialog);
     }
 
     fn parse_sentence(&mut self) {
@@ -102,7 +111,7 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
 
     fn parse_statement(&mut self) {
         assert!(self.at(SyntaxKind::SecondPerson));
-        self.start_node(SyntaxKind::Statement);
+        let m = self.start();
         self.bump();
 
         self.expect(SyntaxKind::Be);
@@ -110,14 +119,14 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
         self.parse_expr();
         self.expect(SyntaxKind::Period);
 
-        self.finish_node();
+        m.complete(self, SyntaxKind::Statement);
     }
 
     fn parse_expr(&mut self) {
         if self.at(SyntaxKind::Nothing) {
-            self.start_node(SyntaxKind::NothingExpr);
+            let m = self.start();
             self.bump();
-            self.finish_node();
+            m.complete(self, SyntaxKind::NothingExpr);
             return;
         }
 
@@ -125,7 +134,7 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
             return;
         }
 
-        let checkpoint = self.checkpoint();
+        let m = self.start();
 
         self.expect(SyntaxKind::Article);
 
@@ -137,21 +146,19 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
                 | SyntaxKind::PositiveNoun
                 | SyntaxKind::NegativeNoun
                 | SyntaxKind::NeutralNoun,
-            ) => self.parse_noun_expr(checkpoint),
+            ) => self.parse_noun_expr(m),
             Some(
                 SyntaxKind::Difference
                 | SyntaxKind::Product
                 | SyntaxKind::Quotient
                 | SyntaxKind::Remainder
                 | SyntaxKind::Sum,
-            ) => self.parse_bin_expr(checkpoint),
+            ) => self.parse_bin_expr(m),
             _ => panic!(),
         }
     }
 
-    fn parse_noun_expr(&mut self, checkpoint: usize) {
-        self.start_node_at(checkpoint, SyntaxKind::NounExpr);
-
+    fn parse_noun_expr(&mut self, m: Marker) {
         loop {
             if matches!(
                 self.peek(),
@@ -171,12 +178,10 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
             }
         }
 
-        self.finish_node();
+        m.complete(self, SyntaxKind::NounExpr);
     }
 
-    fn parse_bin_expr(&mut self, checkpoint: usize) {
-        self.start_node_at(checkpoint, SyntaxKind::BinExpr);
-
+    fn parse_bin_expr(&mut self, m: Marker) {
         match self.peek() {
             Some(SyntaxKind::Difference | SyntaxKind::Quotient) => {
                 self.bump();
@@ -202,12 +207,12 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
 
         self.parse_expr();
 
-        self.finish_node();
+        m.complete(self, SyntaxKind::BinExpr);
     }
 
     fn parse_int_output(&mut self) {
         assert!(self.at(SyntaxKind::Open));
-        self.start_node(SyntaxKind::IntOutput);
+        let m = self.start();
         self.bump();
 
         self.expect(SyntaxKind::SecondPersonPossessive);
@@ -215,12 +220,12 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
         self.expect(SyntaxKind::Heart);
 
         self.expect(SyntaxKind::Period);
-        self.finish_node();
+        m.complete(self, SyntaxKind::IntOutput);
     }
 
     fn parse_char_output(&mut self) {
         assert!(self.at(SyntaxKind::Speak));
-        self.start_node(SyntaxKind::CharOutput);
+        let m = self.start();
         self.bump();
 
         self.expect(SyntaxKind::SecondPersonPossessive);
@@ -228,12 +233,12 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
         self.expect(SyntaxKind::Mind);
 
         self.expect(SyntaxKind::Period);
-        self.finish_node();
+        m.complete(self, SyntaxKind::CharOutput);
     }
 
     fn parse_stage_direction(&mut self) {
         assert!(self.at(SyntaxKind::LBracket));
-        self.start_node(SyntaxKind::StageDirection);
+        let m = self.start();
         self.bump();
 
         match self.peek() {
@@ -258,7 +263,7 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
             _ => panic!(),
         }
 
-        self.finish_node();
+        m.complete(self, SyntaxKind::StageDirection);
     }
 
     fn expect(&mut self, syntax_kind: SyntaxKind) {
@@ -307,22 +312,6 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
     fn lookahead(&mut self, amount: usize) -> Option<SyntaxKind> {
         assert!(amount > 0, "Use peek instead for amount 0");
         self.source.lookahead(amount)
-    }
-
-    fn start_node(&mut self, kind: SyntaxKind) {
-        self.events.push(Event::StartNode { kind });
-    }
-
-    fn start_node_at(&mut self, checkpoint: usize, kind: SyntaxKind) {
-        self.events.push(Event::StartNodeAt { kind, checkpoint });
-    }
-
-    fn finish_node(&mut self) {
-        self.events.push(Event::FinishNode);
-    }
-
-    fn checkpoint(&self) -> usize {
-        self.events.len()
     }
 }
 

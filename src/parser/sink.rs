@@ -21,23 +21,14 @@ impl<'tokens, 'input> Sink<'tokens, 'input> {
     }
 
     pub(super) fn finish(mut self) -> GreenNode {
-        let mut reordered_events = self.events.clone();
-
-        for (idx, event) in self.events.iter().enumerate() {
-            if let Event::StartNodeAt { kind, checkpoint } = event {
-                reordered_events.remove(idx);
-                reordered_events.insert(*checkpoint, Event::StartNode { kind: *kind });
-            }
-        }
-
-        for event in reordered_events {
-            match event {
+        for idx in 0..self.events.len() {
+            match self.events[idx] {
                 Event::StartNode { kind } => self
                     .builder
                     .start_node(ShakespeareProgrammingLanguage::kind_to_raw(kind)),
-                Event::StartNodeAt { .. } => unreachable!(),
                 Event::FinishNode => self.builder.finish_node(),
                 Event::AddToken { kind, text } => self.token(kind, text),
+                Event::MarkerPlaceholder => unreachable!(),
             }
 
             self.skip_ws();
