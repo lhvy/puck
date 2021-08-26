@@ -3,7 +3,7 @@ use crate::lexer::SyntaxKind;
 use crate::parser::event::Event;
 use drop_bomb::DropBomb;
 
-pub(super) struct Marker {
+pub(in super::super) struct Marker {
     pos: usize,
     bomb: DropBomb,
 }
@@ -16,7 +16,7 @@ impl Marker {
         }
     }
 
-    pub(super) fn complete(mut self, p: &mut Parser<'_, '_>, kind: SyntaxKind) {
+    pub(in super::super) fn complete(mut self, p: &mut Parser<'_, '_>, kind: SyntaxKind) {
         self.bomb.defuse();
 
         let event = &mut p.events[self.pos];
