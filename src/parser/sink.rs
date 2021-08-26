@@ -7,11 +7,11 @@ pub(super) struct Sink<'tokens, 'input> {
     builder: GreenNodeBuilder<'static>,
     tokens: &'tokens [Token<'input>],
     cursor: usize,
-    events: Vec<Event<'input>>,
+    events: Vec<Event>,
 }
 
 impl<'tokens, 'input> Sink<'tokens, 'input> {
-    pub(super) fn new(tokens: &'tokens [Token<'input>], events: Vec<Event<'input>>) -> Self {
+    pub(super) fn new(tokens: &'tokens [Token<'input>], events: Vec<Event>) -> Self {
         Self {
             builder: GreenNodeBuilder::new(),
             tokens,
@@ -27,7 +27,7 @@ impl<'tokens, 'input> Sink<'tokens, 'input> {
                     .builder
                     .start_node(ShakespeareProgrammingLanguage::kind_to_raw(kind)),
                 Event::FinishNode => self.builder.finish_node(),
-                Event::AddToken { kind, text } => self.token(kind, text),
+                Event::AddToken { kind } => self.token(kind),
                 Event::MarkerPlaceholder => unreachable!(),
             }
 
@@ -37,9 +37,11 @@ impl<'tokens, 'input> Sink<'tokens, 'input> {
         self.builder.finish()
     }
 
-    fn token(&mut self, kind: SyntaxKind, text: &str) {
-        self.builder
-            .token(ShakespeareProgrammingLanguage::kind_to_raw(kind), text);
+    fn token(&mut self, kind: SyntaxKind) {
+        self.builder.token(
+            ShakespeareProgrammingLanguage::kind_to_raw(kind),
+            self.tokens[self.cursor].text,
+        );
         self.cursor += 1;
     }
 
@@ -49,7 +51,7 @@ impl<'tokens, 'input> Sink<'tokens, 'input> {
                 break;
             }
 
-            self.token(token.kind, token.text);
+            self.token(token.kind);
         }
     }
 }

@@ -26,7 +26,7 @@ pub(crate) fn parse(input: &str) -> Parse {
 
 struct Parser<'tokens, 'input> {
     source: Source<'tokens, 'input>,
-    events: Vec<Event<'input>>,
+    events: Vec<Event>,
 }
 
 impl<'tokens, 'input> Parser<'tokens, 'input> {
@@ -44,7 +44,7 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
         Marker::new(pos)
     }
 
-    fn parse(mut self) -> Vec<Event<'input>> {
+    fn parse(mut self) -> Vec<Event> {
         let m = self.start();
 
         loop {
@@ -283,17 +283,16 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
     }
 
     fn bump(&mut self) {
-        let Token { kind, text } = self.source.next_token().unwrap();
+        let Token { kind, .. } = self.source.next_token().unwrap();
 
-        self.events.push(Event::AddToken { kind, text });
+        self.events.push(Event::AddToken { kind });
     }
 
     fn skip(&mut self) {
-        let Token { text, .. } = self.source.next_token().unwrap();
+        self.source.next_token().unwrap();
 
         self.events.push(Event::AddToken {
             kind: SyntaxKind::Skip,
-            text,
         });
     }
 
