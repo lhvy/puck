@@ -64,7 +64,7 @@ impl Evaluator {
                                     self.eval_expr(expr, &db);
                             }
                             hir::Sentence::IntOutput => {
-                                println!("{}", self.states[&listener].value)
+                                println!("{}", self.states[&listener].value);
                             }
                             hir::Sentence::CharOutput => {
                                 println!(
@@ -73,7 +73,7 @@ impl Evaluator {
                                         self.states[&listener].value.try_into().unwrap()
                                     )
                                     .unwrap()
-                                )
+                                );
                             }
                         }
                     }

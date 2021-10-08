@@ -54,11 +54,11 @@ fn parse_dialog(p: &mut Parser<'_, '_>, m: Marker) {
 
 fn parse_sentence(p: &mut Parser<'_, '_>, force: bool) -> bool {
     if p.at(SyntaxKind::SecondPerson) {
-        parse_statement(p)
+        parse_statement(p);
     } else if p.at(SyntaxKind::Open) {
-        parse_int_output(p)
+        parse_int_output(p);
     } else if p.at(SyntaxKind::Speak) {
-        parse_char_output(p)
+        parse_char_output(p);
     } else if !force && (p.at(SyntaxKind::Character) || p.at(SyntaxKind::LBracket) || p.at_eof()) {
         return false;
     } else {
