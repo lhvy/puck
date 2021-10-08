@@ -1,13 +1,17 @@
 use super::event::Event;
+use super::parse_error::ParseError;
+use super::Parse;
 use crate::lexer::{SyntaxKind, Token};
 use crate::syntax::ShakespeareProgrammingLanguage;
-use rowan::{GreenNode, GreenNodeBuilder, Language};
+use rowan::{GreenNodeBuilder, Language};
+use std::mem;
 
 pub(super) struct Sink<'tokens, 'input> {
     builder: GreenNodeBuilder<'static>,
     tokens: &'tokens [Token<'input>],
     cursor: usize,
     events: Vec<Event>,
+    errors: Vec<ParseError>,
 }
 
 impl<'tokens, 'input> Sink<'tokens, 'input> {
@@ -17,24 +21,29 @@ impl<'tokens, 'input> Sink<'tokens, 'input> {
             tokens,
             cursor: 0,
             events,
+            errors: Vec::new(),
         }
     }
 
-    pub(super) fn finish(mut self) -> GreenNode {
+    pub(super) fn finish(mut self) -> Parse {
         for idx in 0..self.events.len() {
-            match self.events[idx] {
+            match mem::replace(&mut self.events[idx], Event::MarkerPlaceholder) {
                 Event::StartNode { kind } => self
                     .builder
                     .start_node(ShakespeareProgrammingLanguage::kind_to_raw(kind)),
                 Event::FinishNode => self.builder.finish_node(),
                 Event::AddToken { kind } => self.token(kind),
-                Event::MarkerPlaceholder => unreachable!(),
+                Event::MarkerPlaceholder => {}
+                Event::Error(error) => self.errors.push(error),
             }
 
             self.skip_ws();
         }
 
-        self.builder.finish()
+        Parse {
+            green_node: self.builder.finish(),
+            errors: self.errors,
+        }
     }
 
     fn token(&mut self, kind: SyntaxKind) {

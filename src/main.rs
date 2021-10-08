@@ -58,10 +58,16 @@ impl Repl {
             self.stdin.read_line(&mut self.input)?;
 
             let parse = parse(&self.input);
-            let root = ast::Root::cast(parse.syntax_node()).unwrap();
-            let (items, db) = hir::lower(root);
+            for error in &parse.errors {
+                println!("{}", error);
+            }
 
-            self.evaluator.eval(&items, db);
+            if parse.errors.is_empty() {
+                let root = ast::Root::cast(parse.syntax_node()).unwrap();
+                let (items, db) = hir::lower(root);
+
+                self.evaluator.eval(&items, db);
+            }
 
             self.input.clear();
         }

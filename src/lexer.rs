@@ -1,5 +1,8 @@
 use logos::Logos;
 use num_derive::{FromPrimitive, ToPrimitive};
+use std::convert::TryFrom;
+use std::ops::Range as StdRange;
+use text_size::{TextRange, TextSize};
 
 pub(crate) struct Lexer<'a> {
     inner: logos::Lexer<'a, SyntaxKind>,
@@ -19,21 +22,30 @@ impl<'a> Iterator for Lexer<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let syntax_kind = self.inner.next()?;
         let slice = self.inner.slice();
+        let range = {
+            let StdRange { start, end } = self.inner.span();
+            let start = TextSize::try_from(start).unwrap();
+            let end = TextSize::try_from(end).unwrap();
+
+            TextRange::new(start, end)
+        };
 
         Some(Token {
             kind: syntax_kind,
             text: slice,
+            range,
         })
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct Token<'a> {
     pub(crate) kind: SyntaxKind,
     pub(crate) text: &'a str,
+    pub(crate) range: TextRange,
 }
 
-#[derive(Logos, Debug, PartialEq, FromPrimitive, ToPrimitive, Clone, Copy)]
+#[derive(Logos, Debug, PartialEq, Eq, FromPrimitive, ToPrimitive, Clone, Copy, PartialOrd, Ord)]
 pub(crate) enum SyntaxKind {
     Root,
 
@@ -271,6 +283,94 @@ fn roman_numeral(lex: &mut logos::Lexer<'_, SyntaxKind>) -> bool {
     }
 
     false
+}
+
+impl SyntaxKind {
+    pub(crate) fn to_strs(self) -> &'static [&'static str] {
+        match self {
+            SyntaxKind::Be => &["‘am’", "‘are’", "‘art’", "‘be’", "‘is’"][..],
+            SyntaxKind::Article => &["article"][..],
+            SyntaxKind::FirstPerson => &["first person"][..],
+            SyntaxKind::FirstPersonReflexive => &["first person reflexive"][..],
+            SyntaxKind::FirstPersonPossessive => &["first person possessive"][..],
+            SyntaxKind::SecondPerson => &["second person"][..],
+            SyntaxKind::SecondPersonReflexive => &["second person reflexive"][..],
+            SyntaxKind::SecondPersonPossessive => &["second person possessive"][..],
+            SyntaxKind::ThirdPersonPossessive => &["third person possessive"][..],
+            SyntaxKind::PositiveComparative => &["positive comparative"][..],
+            SyntaxKind::NegativeComparative => &["negative comparative"][..],
+            SyntaxKind::More => &["‘more’"][..],
+            SyntaxKind::Than => &["‘than’"][..],
+            SyntaxKind::As => &["‘as’"][..],
+            SyntaxKind::And => &["‘and’"][..],
+            SyntaxKind::To => &["‘to’"][..],
+            SyntaxKind::Of => &["‘of’"][..],
+            SyntaxKind::If => &["‘if’"][..],
+            SyntaxKind::Not => &["‘not’"][..],
+            SyntaxKind::So => &["‘so’"][..],
+            SyntaxKind::Jump => &["‘proceed’", "‘return’"][..],
+            SyntaxKind::Let => &["‘let’"][..],
+            SyntaxKind::We => &["‘we’"][..],
+            SyntaxKind::Us => &["‘us’"][..],
+            SyntaxKind::Must => &["‘shall’", "‘must’"][..],
+            SyntaxKind::Difference => &["‘difference’"][..],
+            SyntaxKind::Product => &["‘product’"][..],
+            SyntaxKind::Quotient => &["‘quotient’"][..],
+            SyntaxKind::Sum => &["‘sum’"][..],
+            SyntaxKind::Remainder => &["‘remainder’"][..],
+            SyntaxKind::Cube => &["‘cube’"][..],
+            SyntaxKind::Square => &["‘square’"][..],
+            SyntaxKind::SquareRoot => &["‘square root’"][..],
+            SyntaxKind::Factorial => &["‘factorial’"][..],
+            SyntaxKind::Twice => &["‘twice’"][..],
+            SyntaxKind::Between => &["‘between’"][..],
+            SyntaxKind::NegativeAdjective
+            | SyntaxKind::NeutralAdjective
+            | SyntaxKind::PositiveAdjective => &["adjective"][..],
+            SyntaxKind::NegativeNoun | SyntaxKind::NeutralNoun | SyntaxKind::PositiveNoun => {
+                &["noun"]
+            }
+            SyntaxKind::Character => &["character"][..],
+            SyntaxKind::Nothing => &["‘nothing‘", "‘zero’"][..],
+            SyntaxKind::Open => &["‘open’"][..],
+            SyntaxKind::Speak => &["‘speak’"][..],
+            SyntaxKind::Listen => &["‘listen’"][..],
+            SyntaxKind::Heart => &["‘heart’"][..],
+            SyntaxKind::Mind => &["‘mind’"][..],
+            SyntaxKind::Remember => &["‘remember’"][..],
+            SyntaxKind::Recall => &["‘recall’"][..],
+            SyntaxKind::Scene => &["‘scene’"][..],
+            SyntaxKind::Act => &["‘act’"][..],
+            SyntaxKind::Pause => &["‘pause’"][..],
+            SyntaxKind::Enter => &["‘enter’"][..],
+            SyntaxKind::Exit => &["‘exit’"][..],
+            SyntaxKind::Exeunt => &["‘exeunt’"][..],
+            SyntaxKind::Period => &["‘.’"][..],
+            SyntaxKind::Exclamation => &["‘!’"][..],
+            SyntaxKind::Question => &["‘?’"][..],
+            SyntaxKind::Comma => &["‘,’"][..],
+            SyntaxKind::Colon => &["‘:’"][..],
+            SyntaxKind::LBracket => &["‘[’"][..],
+            SyntaxKind::RBracket => &["‘]’"][..],
+            SyntaxKind::RomanNumeral => &["roman numeral"][..],
+            SyntaxKind::Error => &["unknown token"][..],
+            // Add as unreachable individually rather than using _ to
+            // ensure future SyntaxKind variants aren't missed.
+            SyntaxKind::Root
+            | SyntaxKind::CharacterDef
+            | SyntaxKind::Comment
+            | SyntaxKind::Skip
+            | SyntaxKind::StageDirection
+            | SyntaxKind::Dialog
+            | SyntaxKind::NounExpr
+            | SyntaxKind::BinExpr
+            | SyntaxKind::NothingExpr
+            | SyntaxKind::Statement
+            | SyntaxKind::IntOutput
+            | SyntaxKind::CharOutput
+            | SyntaxKind::Whitespace => unreachable!(),
+        }
+    }
 }
 
 #[cfg(test)]
