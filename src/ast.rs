@@ -267,7 +267,7 @@ mod tests {
 
     #[test]
     fn character_def() {
-        let syntax_node = parse("Romeo, a test.").syntax_node();
+        let syntax_node = parse("Romeo, a test.", false).syntax_node();
         let root = Root::cast(syntax_node).unwrap();
         let item = root.items().next().unwrap();
 

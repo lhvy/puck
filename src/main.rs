@@ -21,7 +21,7 @@ fn main() -> io::Result<()> {
         2 => {
             let contents = fs::read_to_string(args.nth(1).unwrap())?;
 
-            let parse = parse(&contents);
+            let parse = parse(&contents, true);
             let root = ast::Root::cast(parse.syntax_node()).unwrap();
             let (items, db) = hir::lower(root);
 
@@ -57,7 +57,7 @@ impl Repl {
 
             self.stdin.read_line(&mut self.input)?;
 
-            let parse = parse(&self.input);
+            let parse = parse(&self.input, false);
             for error in &parse.errors {
                 println!("{}", error);
             }

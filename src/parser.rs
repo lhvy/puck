@@ -12,10 +12,10 @@ use parse_error::ParseError;
 use rowan::GreenNode;
 use sink::Sink;
 
-pub(crate) fn parse(input: &str) -> Parse {
+pub(crate) fn parse(input: &str, title: bool) -> Parse {
     let tokens: Vec<_> = Lexer::new(input).collect();
     let parser = Parser::new(&tokens);
-    let events = parser.parse();
+    let events = parser.parse(title);
     let sink = Sink::new(&tokens, events);
 
     sink.finish()

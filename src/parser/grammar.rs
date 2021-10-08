@@ -1,8 +1,12 @@
 use super::imp::{Marker, Parser};
 use crate::lexer::SyntaxKind;
 
-pub(super) fn root(p: &mut Parser<'_, '_>) {
+pub(super) fn root(p: &mut Parser<'_, '_>, title: bool) {
     let m_root = p.start();
+
+    if title {
+        parse_title(p);
+    }
 
     loop {
         if p.at(SyntaxKind::Character) {
@@ -26,6 +30,18 @@ pub(super) fn root(p: &mut Parser<'_, '_>) {
     }
 
     m_root.complete(p, SyntaxKind::Root);
+}
+
+fn parse_title(p: &mut Parser<'_, '_>) {
+    if p.at_eof() {
+        return;
+    }
+    let m = p.start();
+    while !p.at_eof() && !p.at(SyntaxKind::Period) && !p.at(SyntaxKind::Exclamation) {
+        p.skip();
+    }
+    parse_terminator(p);
+    m.complete(p, SyntaxKind::Comment);
 }
 
 fn parse_character_def(p: &mut Parser<'_, '_>, m: Marker) {
@@ -235,7 +251,7 @@ mod tests {
     use expect_test::{expect, Expect};
 
     fn check(input: &str, expected_tree: Expect) {
-        let parse = parse(input);
+        let parse = parse(input, false);
 
         expected_tree.assert_eq(&parse.debug_tree());
     }
@@ -590,6 +606,27 @@ Root@0..24
       Mind@19..23 "mind"
       Period@23..24 ".""#]],
         );
+    }
+
+    #[test]
+    fn parse_title() {
+        let expected_tree = expect![[r#"
+Root@0..11
+  Comment@0..11
+    Skip@0..1 "P"
+    Skip@1..2 "l"
+    Skip@2..3 "a"
+    Skip@3..4 "y"
+    Whitespace@4..5 " "
+    Skip@5..6 "t"
+    Skip@6..7 "i"
+    Skip@7..8 "t"
+    Skip@8..9 "l"
+    Skip@9..10 "e"
+    Period@10..11 ".""#]];
+        let parse = parse("Play title.", true);
+
+        expected_tree.assert_eq(&parse.debug_tree());
     }
 
     #[test]

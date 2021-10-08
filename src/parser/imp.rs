@@ -40,8 +40,8 @@ impl<'tokens, 'input> Parser<'tokens, 'input> {
         Marker::new(pos)
     }
 
-    pub(super) fn parse(mut self) -> Vec<Event> {
-        grammar::root(&mut self);
+    pub(super) fn parse(mut self, title: bool) -> Vec<Event> {
+        grammar::root(&mut self, title);
 
         self.events
     }
