@@ -10,7 +10,7 @@ arrayvec = "0.7.1"
 drop_bomb = "0.1.5"
 la-arena = "0.2.1"
 logos = "0.12.0"
-mimalloc = {version = "0.1.25", default-features = false}
+mimalloc = {version = "0.1.39", default-features = false}
 num-derive = "0.3.3"
 num-traits = "0.2.14"
 regex = "1.5.5"
